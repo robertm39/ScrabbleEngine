@@ -1,0 +1,128 @@
+import itertools
+import requests
+import time
+from html.parser import HTMLParser
+
+
+class GetScrabbleWordsHtmlParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.in_word_list = False
+        self.in_word = False
+        self.all_words = list[str]()
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "div" and ("class", "entries") in attrs:
+            self.in_word_list = True
+            return
+
+        if self.in_word_list and tag == "a":
+            self.in_word = True
+
+    def handle_endtag(self, tag):
+        if tag == "div":
+            self.in_word_list = False
+            return
+        if tag == "a":
+            self.in_word = False
+
+    def handle_data(self, data):
+        if self.in_word:
+            # print(f"Word: {data}")
+            self.all_words.append(data.strip().upper())
+
+
+# Return the words in the given response.
+def get_words(resp: requests.Response) -> list[str] | None:
+    try:
+        parser = GetScrabbleWordsHtmlParser()
+        parser.feed(resp.text)
+        return parser.all_words
+    except KeyboardInterrupt:
+        raise
+    except:
+        return None
+
+
+def get_address(letter, index) -> str:
+    if index == 1:
+        return f"https://scrabble.merriam.com/browse/{letter}"
+    return f"https://scrabble.merriam.com/browse/{letter}/{index}"
+
+
+def test_1():
+    address = r"https://scrabble.merriam.com/browse/a"
+    resp = requests.get(url=address)
+    out_file = "resp.txt"
+    with open(out_file, "w", encoding="utf-8") as file:
+        file.write(resp.text)
+
+
+def test_2():
+    address = r"https://scrabble.merriam.com/browse/a"
+    resp = requests.get(url=address)
+    parser = GetScrabbleWordsHtmlParser()
+    parser.feed(data=resp.text)
+    for word in parser.all_words:
+        print(word)
+
+
+ACCESS_WEBSITE_DELAY = 0.001
+
+
+def get_words_starting_with(letter: str) -> list[str] | None:
+    result = list[str]()
+    prev_words = list[str]()
+    for i in itertools.count(start=1):
+        address = get_address(letter=letter, index=i)
+
+        # Wait just a little bit of time before accessing the website.
+        time.sleep(ACCESS_WEBSITE_DELAY)
+        print(f"  {address}")
+        resp = requests.get(url=address)
+        if resp.status_code != 200:
+            print(f"Error {resp.status_code}")
+            return None
+        words = get_words(resp)
+        if words is None:
+            return None
+        if words == prev_words:
+            break
+        prev_words = words
+        result.extend(words)
+    return result
+
+
+def test_3():
+    for letter in "abcdefghijklmnopqrstuvwxyz":
+        # for letter in "q":
+        # all_words_starting_with = list[str]()
+        print("")
+        print(f"Getting words starting with {letter}")
+        words_starting_with = get_words_starting_with(letter=letter)
+        if words_starting_with is None:
+            print(f"Failed to get words starting with {letter}")
+            continue
+
+        out_filename = f"all_words_starting_with_{letter}.txt"
+        with open(out_filename, "w") as file:
+            for word in words_starting_with:
+                file.write(f"{word}\n")
+
+        # for word in words_starting_with:
+        # all_words.extend(words_starting_with)
+
+    # out_filename = "all_words.txt"
+    # with open(out_filename, "w") as file:
+    #     for word in all_words:
+    #         file.write(f"{word}\n")
+
+
+def main():
+    # test_1()
+    # test_2()
+    test_3()
+
+
+if __name__ == "__main__":
+    main()
