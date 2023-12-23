@@ -39,6 +39,8 @@ WORD = str
 
 # Any tile.
 class Tile:
+    points: int
+
     def __eq__(self, other):
         return self is other
 
@@ -110,7 +112,7 @@ MULTIPLIER = WordMultiplier | TileMultiplier
 class BoardConfig:
     width: int
     height: int
-    tile_to_multiplier: Mapping[BoardPosition, MULTIPLIER]
+    position_to_multiplier: Mapping[BoardPosition, MULTIPLIER]
 
     def contains_position(self, position: BoardPosition) -> bool:
         if position.x < 0 or position.y < 0:
@@ -130,11 +132,30 @@ class ScrabbleConfig:
     min_tiles_for_bingo: int
     bingo_points: int
 
+    def __init__(
+        self,
+        board_config: BoardConfig,
+        playable_words: Collection[WORD],
+        tiles: Collection[Tile],
+        max_tiles_in_hand: int,
+        min_tiles_for_bingo: int,
+        bingo_points: int,
+    ) -> None:
+        self.board_config = board_config
+        self.playable_words = set(playable_words)
+        self.tiles = tuple(tiles)
+        self.max_tiles_in_hand = max_tiles_in_hand
+        self.min_tiles_for_bingo = min_tiles_for_bingo
+        self.bingo_points = bingo_points
+
 
 # A player in the game.
 @dataclass
 class Player:
     position: int
+
+    def __hash__(self) -> int:
+        return hash(self.position)
 
 
 # The state of a player in the game.

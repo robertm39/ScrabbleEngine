@@ -146,6 +146,60 @@ class RulesTest(unittest.TestCase):
         board_state = BoardState(position_to_tile=position_to_tile)
         self.assertCountEqual([new_word], move.get_words_made(board_state=board_state))
 
+    def test_get_points_scored_1(self):
+        x0_y0 = BoardPosition(x=0, y=0)
+        x1_y0 = BoardPosition(x=1, y=0)
+        k = LetterTile(letter="K", points=5)
+        k_place = LetterTilePlacing(tile=k, position=x0_y0)
+        a = LetterTile(letter="A", points=1)
+        a_place = LetterTilePlacing(tile=a, position=x1_y0)
+        t = LetterTile(letter="T", points=1)
+        placings = [k_place, a_place]
+        position_to_tile = {x0_y0: k_place, x1_y0: a_place}
+        word = WordOnBoard(position_to_tile=position_to_tile)
+        board_state = BoardState(position_to_tile=dict())
+
+        pairs = (
+            (dict(), 6),
+            ({x0_y0: TileMultiplier(2)}, 11),
+            ({x0_y0: TileMultiplier(3)}, 16),
+            ({x1_y0: TileMultiplier(2)}, 7),
+            ({x1_y0: TileMultiplier(3)}, 8),
+            ({x0_y0: WordMultiplier(2)}, 12),
+            ({x0_y0: WordMultiplier(3)}, 18),
+            ({x1_y0: WordMultiplier(2)}, 12),
+            ({x1_y0: WordMultiplier(3)}, 18),
+            ({x0_y0: TileMultiplier(3), x1_y0: WordMultiplier(3)}, 48),
+            ({x0_y0: TileMultiplier(3), x1_y0: WordMultiplier(2)}, 32),
+        )
+        for position_to_multiplier, exp_points in pairs:
+            config = ScrabbleConfig(
+                board_config=BoardConfig(
+                    width=2, height=2, position_to_multiplier=position_to_multiplier
+                ),
+                playable_words=["KA"],
+                tiles=[k, a],
+                max_tiles_in_hand=2,
+                min_tiles_for_bingo=7,
+                bingo_points=50,
+            )
+            player = Player(position=0)
+            state = GameState(
+                config=config,
+                current_player=player,
+                player_to_state={
+                    player: PlayerState(player=player, score=0, tiles=[k, a])
+                },
+                player_order=(player,),
+                bag_state=TileBagState(tiles=[t]),
+                board_state=board_state,
+                game_finished=False,
+            )
+
+            move = PlaceTilesMove(tile_placings=placings)
+            points_scored = move.get_points_for_word(state=state, word=word)
+            self.assertEqual(points_scored, exp_points)
+
 
 if __name__ == "__main__":
     unittest.main()

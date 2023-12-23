@@ -16,11 +16,18 @@ class Move(ABC):
     def is_valid(self, state: GameState) -> bool:
         ...
 
+    @abstractmethod
+    def get_next_state(self, state: GameState) -> GameState:
+        ...
+
 
 # A move where a single word is placed.
 @dataclass
 class PlaceTilesMove(Move):
-    tile_placings: list[TilePlacing]
+    tile_placings: Sequence[TilePlacing]
+
+    def __init__(self, tile_placings: Iterable[TilePlacing]) -> None:
+        self.tile_placings = tuple(tile_placings)
 
     # Return all of the words made by this move.
     def get_words_made(self, board_state: BoardState) -> list[WordOnBoard]:
@@ -128,6 +135,99 @@ class PlaceTilesMove(Move):
 
         return True
 
+    # Return the number of points scored in a particular word in this move.
+    def get_points_for_word(self, state: GameState, word: WordOnBoard) -> int:
+        player_tiles = state.player_to_state[state.current_player].tiles
+
+        # Determine the sum of the points of the tiles, taking tile multipliers into account.
+        word_multiplier = 1
+        word_points = 0
+        for placing in word.position_to_tile.values():
+            # Get the base score of the tile.
+            tile_points = placing.tile.points
+
+            # If this is our tile, apply the tile-multiplier, if any.
+            if (
+                placing.tile in player_tiles
+                and placing.position in state.config.board_config.position_to_multiplier
+            ):
+                multiplier = state.config.board_config.position_to_multiplier[
+                    placing.position
+                ]
+                if isinstance(multiplier, TileMultiplier):
+                    tile_points *= multiplier.multiplier
+                elif isinstance(multiplier, WordMultiplier):
+                    word_multiplier *= multiplier.multiplier
+
+            word_points += tile_points
+        word_points *= word_multiplier
+        return word_points
+
+    def get_next_state(self, state: GameState) -> GameState:
+        # Get all of the new words.
+        new_words = self.get_words_made(board_state=state.board_state)
+
+        # Determine the number of points scored with words.
+        word_points = 0
+        for word in new_words:
+            word_points += self.get_points_for_word(state=state, word=word)
+
+        turn_points = word_points
+        # Determine whether there was a bingo, and add the points if there was.
+        if len(self.tile_placings) >= state.config.min_tiles_for_bingo:
+            turn_points += state.config.bingo_points
+
+        # Determine the new total score of the player.
+        player_state = state.player_to_state[state.current_player]
+        new_score = player_state.score + turn_points
+
+        # Remove the played tiles from the player's rack.
+        new_player_tiles = list[Tile]()
+        played_tiles = [placing.tile for placing in self.tile_placings]
+        for tile in player_state.tiles:
+            if not tile in played_tiles:
+                new_player_tiles.append(tile)  # type: ignore
+
+        # Place the tiles on the board.
+        new_position_to_tile = dict(state.board_state.position_to_tile)
+        for placing in self.tile_placings:
+            new_position_to_tile[placing.position] = placing
+        new_board_state = BoardState(position_to_tile=new_position_to_tile)
+
+        # Draw new tiles.
+        num_tiles_to_draw = min(len(played_tiles), len(state.bag_state.tiles))
+        bag_tiles = list(state.bag_state.tiles)
+        shuffle(bag_tiles)
+        drawn_tiles, remaining_tiles = (
+            bag_tiles[:num_tiles_to_draw],
+            bag_tiles[num_tiles_to_draw:],
+        )
+        new_player_tiles.extend(drawn_tiles)  # type: ignore
+        new_player_state = PlayerState(
+            player=state.current_player, score=new_score, tiles=new_player_tiles
+        )
+        new_player_to_state = dict(state.player_to_state)
+        new_player_to_state[state.current_player] = new_player_state
+
+        new_bag_state = TileBagState(tiles=remaining_tiles)  # type: ignore
+
+        # If there were already no tiles to draw, and the player has no tiles left,
+        # give the bonuses and penalties for unplayed tiles and end the game.
+
+        # Advance to the next player.
+        player_index = state.player_order.index(state.current_player)
+        next_index = get_next_player_index(player_index, len(state.player_order))
+        next_player = state.player_order[next_index]
+
+        return GameState(
+            config=state.config,
+            current_player=next_player,
+            player_order=state.player_order,
+            player_to_state=new_player_to_state,
+            bag_state=new_bag_state,
+            board_state=new_board_state,
+        )
+
 
 # A move where some tiles are exchanged for new tiles.
 @dataclass
@@ -158,7 +258,7 @@ class ExchangeTilesMove(Move):
     # Return the state after exchanging these tiles.
     def get_next_state(self, state: GameState) -> GameState:
         # Get the tiles in the bag and shuffle them.
-        bag_tiles = state.bag_state.tiles
+        bag_tiles = list(state.bag_state.tiles)
         shuffle(bag_tiles)
 
         # Draw tiles from the bag, and put the exchanged ones in.
@@ -229,9 +329,6 @@ class PassMove(Move):
         )
 
 
-# MOVE = PlaceWordMove | ExchangeTilesMove | PassMove
-
-
 # A move-getter. Either an AI or a human player.
 class MoveGetter(ABC):
     @abstractmethod
@@ -240,109 +337,3 @@ class MoveGetter(ABC):
 
     def notify_new_state(self, state: GameState) -> None:
         pass
-
-
-# # Return whether the given move places its tiles in a line from left to right.
-# def is_left_to_right_placement(move: PlaceWordMove) -> bool:
-#     # If not all of the letters have the same y-coordinate, it isn't a left-to-right word.
-#     if len([placing.position.y for placing in move.tile_placings]) > 1:
-#         return False
-
-#     # Determine the left and right ends of the word.
-#     min_x = min([placing.position.x for placing in move.tile_placings])
-#     max_x = max([placing.position.x for placing in move.tile_placings])
-
-#     # There must be exactly enough letters to go from the left end to the right end.
-#     if len(move.tile_placings) != (max_x - min_x + 1):
-#         return False
-
-#     # Each spot in-between must be covered. This is equivalent to there not being any duplicates,
-#     # because we have already checked that the number of tiles is correct.
-#     covered_positions = set[int]()
-#     for placing in move.tile_placings:
-#         if placing.position.x in covered_positions:
-#             return False
-#     return True
-
-
-# # This is redundant with the method for left-to-right, but I don't want to deal with that right now.
-# # Return whether the given move places its tiles in a line from top to bottom.
-# def is_top_to_bottom_placement(move: PlaceWordMove, board_state: BoardState) -> bool:
-#     # At least one tile must be placed.
-#     if len(move.tile_placings) == 0:
-#         return False
-
-#     # If not all of the letters have the same x-coordinate, it isn't a top-to-bottom word.
-#     if len([placing.position.x for placing in move.tile_placings]) > 1:
-#         return False
-
-#     x = move.tile_placings[0].position.x
-
-#     # Determine the top and bottom ends of the word.
-#     min_y = min([placing.position.y for placing in move.tile_placings])
-#     max_y = max([placing.position.y for placing in move.tile_placings])
-
-#     # No two tiles may be in the same position.
-#     covered_positions = set[int]()
-#     for placing in move.tile_placings:
-#         if placing.position.y in covered_positions:
-#             return False
-#         covered_positions.add(placing.position.y)
-
-#     # Each spot in-between the two tiles must be covered,
-#     # either by a tile already on the board or by a tile in the move.
-#     for y in range(min_y, max_y + 1):
-#         if (board_state.get_tile_at(BoardPosition(x=x, y=y)) is None) and (
-#             y not in covered_positions
-#         ):
-#             return False
-
-#     # # There must be exactly enough letters to go from the top end to the bottom end.
-#     # if len(move.tile_placings) != (max_y - min_y + 1):
-#     #     return False
-
-#     # # Each spot in-between must be covered. This is equivalent to there not being any duplicates,
-#     # # because we have already checked that the number of tiles is correct.
-#     # return True
-#     return True
-
-
-# # Return whether the given move is valid in the given state.
-# def is_move_valid(state: GameState, move: MOVE) -> bool:
-#     # All passes are valid.
-#     if isinstance(move, PassMove):
-#         return True
-
-#     # You may only exchange tiles if at least seven tiles are in the bag.
-#     if isinstance(move, ExchangeTilesMove)
-
-#     # # A move must place
-
-#     # # If the move uses the same tile multiple times, it isn't valid.
-#     # used_tiles = set[TILE]()
-#     # for placing in move.tile_placings:
-#     #     if placing.tile in used_tiles:
-#     #         return False
-#     #     used_tiles.add(placing.tile)
-
-#     # # If the move uses tiles the active player doesn't have, it isn't valid.
-#     # current_player_state = state.player_to_state[state.current_player]
-#     # for placing in move.tile_placings:
-#     #     if not placing.tile in current_player_state.tiles:
-#     #         return False
-
-#     # # If the move places a tile outside the board, it isn't valid.
-#     # for placing in move.tile_placings:
-#     #     if not state.config.board_config.contains_position(placing.position):
-#     #         return False
-
-#     # # If the move places a tile onto a tile already on the board, it isn't valid.
-#     # for placing in move.tile_placings:
-#     #     if state.board_state.get_tile_at(placing.position) is not None:
-#     #         return False
-
-#     # # If two tiles
-
-
-# def get_next_state(state: GameState, move: Move) -> GameState:
-#     pass
