@@ -1,3 +1,4 @@
+import os
 import itertools
 import requests
 import time
@@ -117,11 +118,27 @@ def test_3():
     #     for word in all_words:
     #         file.write(f"{word}\n")
 
+# def collect_all_words():
+#     path = r"Scrabble_Words_Starting_With"
+#     all_words = list[str]()
+#     for filename in os.listdir(path):
+#         with open(os.path.join(path, filename)) as file:
+#             for line in file:
+#                 line = line.strip()
+#                 if not line:
+#                     continue
+#                 all_words.append(line)
+    
+#     out_path = os.path.join("Scrabble_Words", "all_scrabble_words.txt")
+#     with open(out_path, "w") as file:
+#         for word in all_words:
+#             file.write(f"{word}\n")
 
 def main():
     # test_1()
     # test_2()
     test_3()
+    # collect_all_words()
 
 
 if __name__ == "__main__":
