@@ -118,6 +118,7 @@ def test_3():
     #     for word in all_words:
     #         file.write(f"{word}\n")
 
+
 # def collect_all_words():
 #     path = r"Scrabble_Words_Starting_With"
 #     all_words = list[str]()
@@ -128,17 +129,83 @@ def test_3():
 #                 if not line:
 #                     continue
 #                 all_words.append(line)
-    
+
 #     out_path = os.path.join("Scrabble_Words", "all_scrabble_words.txt")
 #     with open(out_path, "w") as file:
 #         for word in all_words:
 #             file.write(f"{word}\n")
 
+ALL_WORDS_PATH = r"Scrabble_Words\all_scrabble_words.txt"
+
+
+# Return all of the words in the Scrabble dictionary.
+def get_all_words(_cache=list[str]()) -> list[str]:
+    if not _cache:
+        with open(ALL_WORDS_PATH) as file:
+            for line in file:
+                line = line.strip()
+                if line:
+                    _cache.append(line)
+    return list(_cache)
+
+
+def test_4():
+    for word in get_all_words():
+        print(word)
+
+
+def get_all_substrings(s: str) -> list[str]:
+    result = list[str]()
+    for i in range(len(s)):
+        for l in range(len(s) - i):
+            result.append(s[i : i + l])
+    return result
+
+
+def make_infix_data():
+    all_words = get_all_words()
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    can_add_at_start = {c: set[str]() for c in alphabet}
+    can_add_at_end = {c: set[str]() for c in alphabet}
+
+    for word in all_words:
+        # if "AA" in word:
+        #     pass
+        for i in range(len(word)):
+            for l in range(1, len(word) - i):
+                j = i + l
+                substring = word[i:j]
+                if i > 0:
+                    before = word[i - 1]
+                    can_add_at_start[before].add(substring)
+                if j < len(word):
+                    after = word[j]
+                    can_add_at_end[after].add(substring)
+
+    for l, can_add in can_add_at_start.items():
+        can_add = sorted(list(can_add))
+        filename = f"can_add_{l}_at_start.txt"
+        filepath = os.path.join("Infix_Data", filename)
+        with open(filepath, "w") as file:
+            for word in can_add:
+                file.write(f"{word}\n")
+
+    for l, can_add in can_add_at_end.items():
+        can_add = sorted(list(can_add))
+        filename = f"can_add_{l}_at_end.txt"
+        filepath = os.path.join("Infix_Data", filename)
+        with open(filepath, "w") as file:
+            for word in can_add:
+                file.write(f"{word}\n")
+
+
 def main():
     # test_1()
     # test_2()
-    test_3()
+    # test_3()
     # collect_all_words()
+    # test_4()
+    make_infix_data()
 
 
 if __name__ == "__main__":
