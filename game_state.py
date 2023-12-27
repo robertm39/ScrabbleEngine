@@ -41,54 +41,56 @@ WORD = str
 class Tile:
     points: int
 
-    def __eq__(self, other):
-        return self is other
+    # def __eq__(self, other):
+    #     return self is other
 
-    def __hash__(self):
-        return hash(id(self))
+    # def __hash__(self):
+    #     return hash(id(self))
 
 
 # A tile with a letter on it.
 @dataclass
 class LetterTile(Tile):
     letter: LETTER
-    points: int
+    # points: int
 
 
 # A tile with nothing on it.
 @dataclass
 class BlankTile(Tile):
-    points: int
+    letter: LETTER | None = None
+    # points: int
 
 
 # # Any tile.
 # TILE = BasicTile | BlankTile
 
 
-# A position on the Scrabble board.
-@dataclass
-class BoardPosition:
-    x: int  # Starting from 0, going from left to right.
-    y: int  # Starting from 0, going from top to bottom.
+BoardPosition = tuple[int, int]
+# # A position on the Scrabble board.
+# @dataclass
+# class BoardPosition:
+#     x: int  # Starting from 0, going from left to right.
+#     y: int  # Starting from 0, going from top to bottom.
 
-    def __hash__(self) -> int:
-        return hash(self.x) ^ hash(self.y)
+#     def __hash__(self) -> int:
+#         return hash(self.x) ^ hash(self.y)
 
-    def __lt__(self, other: Self) -> bool:
-        if self.y < other.y:
-            return True
-        return self.x < other.x
+#     def __lt__(self, other: Self) -> bool:
+#         if self.y < other.y:
+#             return True
+#         return self.x < other.x
 
-    def __le__(self, other: Self) -> bool:
-        return (self < other) or (self == other)
+#     def __le__(self, other: Self) -> bool:
+#         return (self < other) or (self == other)
 
-    def __gt__(self, other: Self) -> bool:
-        if self.y > other.y:
-            return True
-        return self.x > other.x
+#     def __gt__(self, other: Self) -> bool:
+#         if self.y > other.y:
+#             return True
+#         return self.x > other.x
 
-    def __ge__(self, other: Self) -> bool:
-        return (self > other) or (self == other)
+#     def __ge__(self, other: Self) -> bool:
+#         return (self > other) or (self == other)
 
 
 # A multiplier on the board for a word.
@@ -104,46 +106,66 @@ class TileMultiplier:
 
 
 # Any multiplier on the board.
-MULTIPLIER = WordMultiplier | TileMultiplier
+Multiplier = WordMultiplier | TileMultiplier
 
 
-# The configuration of the board.
-@dataclass
-class BoardConfig:
-    width: int
-    height: int
-    position_to_multiplier: Mapping[BoardPosition, MULTIPLIER]
+# # The configuration of the board.
+# @dataclass
+# class BoardConfig:
+#     width: int
+#     height: int
+#     position_to_multiplier: Mapping[BoardPosition, Multiplier]
 
-    def contains_position(self, position: BoardPosition) -> bool:
-        if position.x < 0 or position.y < 0:
-            return False
-        if self.width <= position.x or self.height <= position.y:
-            return False
-        return True
+#     def contains_position(self, position: BoardPosition) -> bool:
+#         if position.x < 0 or position.y < 0:
+#             return False
+#         if self.width <= position.x or self.height <= position.y:
+#             return False
+#         return True
 
 
-# The configuration of a Scrabble game.
+# # The configuration of a Scrabble game.
+# @dataclass
+# class ScrabbleConfig:
+#     board_config: BoardConfig
+#     playable_words: Collection[WORD]
+#     tiles: Collection[Tile]
+#     max_tiles_in_hand: int
+#     min_tiles_for_bingo: int
+#     bingo_points: int
+
+#     def __init__(
+#         self,
+#         board_config: BoardConfig,
+#         playable_words: Collection[WORD],
+#         tiles: Collection[Tile],
+#         max_tiles_in_hand: int,
+#         min_tiles_for_bingo: int,
+#         bingo_points: int,
+#     ) -> None:
+#         self.board_config = board_config
+#         self.playable_words = set(playable_words)
+#         self.tiles = tuple(tiles)
+#         self.max_tiles_in_hand = max_tiles_in_hand
+#         self.min_tiles_for_bingo = min_tiles_for_bingo
+#         self.bingo_points = bingo_points
+
+
 @dataclass
 class ScrabbleConfig:
-    board_config: BoardConfig
     playable_words: Collection[WORD]
-    tiles: Collection[Tile]
     max_tiles_in_hand: int
     min_tiles_for_bingo: int
     bingo_points: int
 
     def __init__(
         self,
-        board_config: BoardConfig,
-        playable_words: Collection[WORD],
-        tiles: Collection[Tile],
+        playable_words: Iterable[WORD],
         max_tiles_in_hand: int,
         min_tiles_for_bingo: int,
         bingo_points: int,
-    ) -> None:
-        self.board_config = board_config
+    ):
         self.playable_words = set(playable_words)
-        self.tiles = tuple(tiles)
         self.max_tiles_in_hand = max_tiles_in_hand
         self.min_tiles_for_bingo = min_tiles_for_bingo
         self.bingo_points = bingo_points
@@ -164,7 +186,6 @@ class PlayerState:
     player: Player
     score: int
     tiles: list[Tile]
-    # next_turn_skipped: bool
 
     def get_visible_to(self, p: Player) -> "VISIBLE_PLAYER_STATE":
         if p == self.player:
@@ -191,8 +212,11 @@ VISIBLE_PLAYER_STATE = PlayerState | VisiblePlayerState
 
 # The state of the tile-bag.
 @dataclass
-class TileBagState:
+class Bag:
     tiles: list[Tile]
+
+    def __init__(self, tiles: Iterable[Tile]):
+        self.tiles = list(tiles)
 
     def get_visible_to(self, p: Player) -> "VisibleTileBagState":
         return VisibleTileBagState(tiles=[None] * len(self.tiles))
@@ -204,172 +228,199 @@ class VisibleTileBagState:
     tiles: list[None]
 
 
-# Any placing of a tile.
-class TilePlacing(ABC):
-    @property
-    @abstractmethod
-    def position(self) -> BoardPosition:
-        ...
+# # Any placing of a tile.
+# class TilePlacing(ABC):
+#     @property
+#     @abstractmethod
+#     def position(self) -> BoardPosition:
+#         ...
 
-    @property
-    @abstractmethod
-    def tile(self) -> Tile:
-        ...
+#     @property
+#     @abstractmethod
+#     def tile(self) -> Tile:
+#         ...
 
-    @property
-    @abstractmethod
-    def letter(self) -> LETTER:
-        ...
-
-
-# A placing of a single non-blank tile.
-# @dataclass
-class LetterTilePlacing(TilePlacing):
-    # tile: BasicTile
-    # position: BoardPosition
-    def __init__(self, tile: LetterTile, position: BoardPosition) -> None:
-        self._tile = tile
-        self._position = position
-
-    @property
-    def tile(self) -> Tile:
-        return self._tile
-
-    @property
-    def position(self) -> BoardPosition:
-        return self._position
-
-    @property
-    def letter(self) -> LETTER:
-        return self.tile.letter  # type: ignore
-
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return False
-        return self.tile == other.tile and self.position == other.position
+#     @property
+#     @abstractmethod
+#     def letter(self) -> LETTER:
+#         ...
 
 
-# A placing of a blank tile.
-# @dataclass
-class BlankTilePlacing(TilePlacing):
-    # tile: BlankTile
-    # position: BoardPosition
-    # letter: LETTER
-    def __init__(
-        self, tile: BlankTile, position: BoardPosition, letter: LETTER
-    ) -> None:
-        self._tile = tile
-        self._position = position
-        self._letter = letter
+# # A placing of a single non-blank tile.
+# # @dataclass
+# class LetterTilePlacing(TilePlacing):
+#     # tile: BasicTile
+#     # position: BoardPosition
+#     def __init__(self, tile: LetterTile, position: BoardPosition) -> None:
+#         self._tile = tile
+#         self._position = position
 
-    @property
-    def tile(self) -> Tile:
-        return self._tile
+#     @property
+#     def tile(self) -> Tile:
+#         return self._tile
 
-    @property
-    def position(self) -> BoardPosition:
-        return self._position
+#     @property
+#     def position(self) -> BoardPosition:
+#         return self._position
 
-    @property
-    def letter(self) -> LETTER:
-        return self._letter  # type: ignore
+#     @property
+#     def letter(self) -> LETTER:
+#         return self.tile.letter  # type: ignore
 
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return False
-        return (
-            self.tile == other.tile
-            and self.position == other.position
-            and self.letter == other.letter
-        )
+#     def __eq__(self, other):
+#         if not isinstance(other, type(self)):
+#             return False
+#         return self.tile == other.tile and self.position == other.position
+
+
+# # A placing of a blank tile.
+# # @dataclass
+# class BlankTilePlacing(TilePlacing):
+#     # tile: BlankTile
+#     # position: BoardPosition
+#     # letter: LETTER
+#     def __init__(
+#         self, tile: BlankTile, position: BoardPosition, letter: LETTER
+#     ) -> None:
+#         self._tile = tile
+#         self._position = position
+#         self._letter = letter
+
+#     @property
+#     def tile(self) -> Tile:
+#         return self._tile
+
+#     @property
+#     def position(self) -> BoardPosition:
+#         return self._position
+
+#     @property
+#     def letter(self) -> LETTER:
+#         return self._letter  # type: ignore
+
+#     def __eq__(self, other):
+#         if not isinstance(other, type(self)):
+#             return False
+#         return (
+#             self.tile == other.tile
+#             and self.position == other.position
+#             and self.letter == other.letter
+#         )
 
 
 # A word on the board.
 @dataclass
 class WordOnBoard:
-    position_to_tile: Mapping[BoardPosition, TilePlacing]
+    position_to_tile: Mapping[BoardPosition, Tile]
 
-    def __init__(self, position_to_tile: Mapping[BoardPosition, TilePlacing]) -> None:
+    def __init__(self, position_to_tile: Mapping[BoardPosition, Tile]) -> None:
         self.position_to_tile = frozendict(position_to_tile)
 
     # Return the word spelled out in these tiles.
     def get_word(self) -> WORD:
-        placings = list(self.position_to_tile.values())
-        placings.sort(key=lambda p: p.position)
-        return "".join([p.letter for p in placings])
+        pairs = list(self.position_to_tile.items())
+        pairs.sort(key=lambda p: p[0][0] + p[0][1])
+        letters = [p[1].letter for p in pairs]  # type: ignore
+        return "".join(letters)
+        # placings = list(self.position_to_tile.values())
+        # placings.sort(key=lambda p: p.position)
+        # return "".join([p.letter for p in placings])
 
 
 # The state of the board.
 @dataclass
-class BoardState:
-    position_to_tile: Mapping[BoardPosition, TilePlacing]
+class Board:
+    width: int
+    height: int
+    position_to_tile: Mapping[BoardPosition, Tile]
+    position_to_multiplier: Mapping[BoardPosition, Multiplier]
 
-    def __init__(self, position_to_tile: Mapping[BoardPosition, TilePlacing]) -> None:
-        self.position_to_tile = frozendict(position_to_tile)
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        position_to_tile: Mapping[BoardPosition, Tile],
+        position_to_multiplier: Mapping[BoardPosition, Multiplier],
+    ) -> None:
+        self.width = width
+        self.height = height
+        self.position_to_tile = dict(position_to_tile)
+        self.position_to_multiplier = frozendict(position_to_multiplier)
 
-    # Return the tile at the given position.
-    def get_tile_at(self, position: BoardPosition) -> TilePlacing | None:
+    # Return the tile at the given position, or None if there is none.
+    def get_tile_at(self, position: BoardPosition) -> Tile | None:
         return self.position_to_tile.get(position, None)
+
+    # Return the letter at the given position, or None if there is none.
+    def get_letter_at(self, position: BoardPosition) -> LETTER | None:
+        tile = self.get_tile_at(position)
+        if tile is None:
+            return None
+        return getattr(tile, "letter", None)
+
+    # Return the multiplier at the given position, or None if there is none.
+    def get_multiplier_at(self, position: BoardPosition) -> Multiplier | None:
+        return self.position_to_multiplier.get(position, None)
 
     # Return the state of the board, which is visible to all of the players.
     def get_visible_to(self, p: Player) -> Self:
         return self
 
-    # Return all of the words on the board.
-    def get_words(self) -> list[WordOnBoard]:
-        result = list[WordOnBoard]()
+    # # Return all of the words on the board.
+    # def get_words(self) -> list[WordOnBoard]:
+    #     result = list[WordOnBoard]()
 
-        # Find all of the left-to-right words.
-        # Find all of the tiles with no tile to their left.
-        possible_l_to_r_word_starts = list[BoardPosition]()
-        for position in self.position_to_tile:
-            to_left = BoardPosition(x=position.x - 1, y=position.y)
-            if self.get_tile_at(to_left) is None:
-                possible_l_to_r_word_starts.append(position)
+    #     # Find all of the left-to-right words.
+    #     # Find all of the tiles with no tile to their left.
+    #     possible_l_to_r_word_starts = list[BoardPosition]()
+    #     for position in self.position_to_tile:
+    #         to_left = BoardPosition(x=position.x - 1, y=position.y)
+    #         if self.get_tile_at(to_left) is None:
+    #             possible_l_to_r_word_starts.append(position)
 
-        # For each of these tiles, find the sequence of tiles extending to the right from it.
-        for word_start in possible_l_to_r_word_starts:
-            # Find all of the tiles in the word.
-            word_position_to_tile = dict[BoardPosition, TilePlacing]()
-            current_position = word_start
-            while True:
-                current_tile = self.get_tile_at(current_position)
-                if current_tile is None:
-                    break
-                word_position_to_tile[current_position] = current_tile
-                current_position = BoardPosition(
-                    x=current_position.x + 1, y=current_position.y
-                )
-            if len(word_position_to_tile) <= 1:
-                continue
-            result.append(WordOnBoard(position_to_tile=word_position_to_tile))
+    #     # For each of these tiles, find the sequence of tiles extending to the right from it.
+    #     for word_start in possible_l_to_r_word_starts:
+    #         # Find all of the tiles in the word.
+    #         word_position_to_tile = dict[BoardPosition, TilePlacing]()
+    #         current_position = word_start
+    #         while True:
+    #             current_tile = self.get_tile_at(current_position)
+    #             if current_tile is None:
+    #                 break
+    #             word_position_to_tile[current_position] = current_tile
+    #             current_position = BoardPosition(
+    #                 x=current_position.x + 1, y=current_position.y
+    #             )
+    #         if len(word_position_to_tile) <= 1:
+    #             continue
+    #         result.append(WordOnBoard(position_to_tile=word_position_to_tile))
 
-        # Find all of the top-to-bottom words.
-        # Find all of the tiles with no tile above them.
-        possible_t_to_b_word_starts = list[BoardPosition]()
-        for position in self.position_to_tile:
-            to_up = BoardPosition(x=position.x, y=position.y - 1)
-            if self.get_tile_at(to_up) is None:
-                possible_t_to_b_word_starts.append(position)
+    #     # Find all of the top-to-bottom words.
+    #     # Find all of the tiles with no tile above them.
+    #     possible_t_to_b_word_starts = list[BoardPosition]()
+    #     for position in self.position_to_tile:
+    #         to_up = BoardPosition(x=position.x, y=position.y - 1)
+    #         if self.get_tile_at(to_up) is None:
+    #             possible_t_to_b_word_starts.append(position)
 
-        # For each of these tiles, find the sequence of tiles extending down from it.
-        for word_start in possible_t_to_b_word_starts:
-            # Find all of the tiles in the word.
-            word_position_to_tile = dict[BoardPosition, TilePlacing]()
-            current_position = word_start
-            while True:
-                current_tile = self.get_tile_at(current_position)
-                if current_tile is None:
-                    break
-                word_position_to_tile[current_position] = current_tile
-                current_position = BoardPosition(
-                    x=current_position.x, y=current_position.y + 1
-                )
-            if len(word_position_to_tile) <= 1:
-                continue
-            result.append(WordOnBoard(position_to_tile=word_position_to_tile))
+    #     # For each of these tiles, find the sequence of tiles extending down from it.
+    #     for word_start in possible_t_to_b_word_starts:
+    #         # Find all of the tiles in the word.
+    #         word_position_to_tile = dict[BoardPosition, TilePlacing]()
+    #         current_position = word_start
+    #         while True:
+    #             current_tile = self.get_tile_at(current_position)
+    #             if current_tile is None:
+    #                 break
+    #             word_position_to_tile[current_position] = current_tile
+    #             current_position = BoardPosition(
+    #                 x=current_position.x, y=current_position.y + 1
+    #             )
+    #         if len(word_position_to_tile) <= 1:
+    #             continue
+    #         result.append(WordOnBoard(position_to_tile=word_position_to_tile))
 
-        return result
+    #     return result
 
 
 # The state of the entire game.
@@ -378,9 +429,9 @@ class GameState:
     config: ScrabbleConfig
     current_player: Player
     player_order: Sequence[Player]
-    player_to_state: Mapping[Player, PlayerState | VisiblePlayerState]
-    bag_state: TileBagState | VisibleTileBagState
-    board_state: BoardState
+    player_to_state: Mapping[Player, PlayerState]
+    bag_state: Bag
+    board_state: Board
     game_finished: bool = False
 
     def __init__(
@@ -388,15 +439,28 @@ class GameState:
         config: ScrabbleConfig,
         current_player: Player,
         player_order: Iterable[Player],
-        player_to_state: Mapping[Player, PlayerState | VisiblePlayerState],
-        bag_state: TileBagState | VisibleTileBagState,
-        board_state: BoardState,
+        player_to_state: Mapping[Player, PlayerState],
+        bag_state: Bag,
+        board_state: Board,
         game_finished: bool = False,
     ):
         self.config = config
         self.current_player = current_player
-        self.player_to_state = frozendict(player_to_state)
+        self.player_to_state = dict(player_to_state)
         self.player_order = tuple(player_order)
         self.bag_state = bag_state
         self.board_state = board_state
         self.game_finished = game_finished
+
+    # TODO get_visible_to(p: Player) -> VisibleGameState
+
+
+@dataclass
+class VisibleGameState:
+    config: ScrabbleConfig
+    current_player: Player
+    player_order: Sequence[Player]
+    player_to_state: Mapping[Player, PlayerState | VisiblePlayerState]
+    bag_state: Bag | VisibleTileBagState
+    board_state: Board
+    game_finished: bool = False
