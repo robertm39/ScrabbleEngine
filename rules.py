@@ -313,49 +313,6 @@ class ExchangeTilesMove(Move):
         # Finally, advance to the next player.
         advance_player(state)
 
-    # # Return the state after exchanging these tiles.
-    # def get_next_state(self, state: GameState) -> GameState:
-    #     # Get the tiles in the bag and shuffle them.
-    #     bag_tiles = list(state.bag_state.tiles)
-    #     shuffle(bag_tiles)
-
-    #     # Draw tiles from the bag, and put the exchanged ones in.
-    #     n_drawn = len(self.tiles)
-    #     drawn_tiles, rest_tiles = bag_tiles[:n_drawn], bag_tiles[n_drawn:]
-    #     new_bag_tiles = self.tiles + rest_tiles
-    #     shuffle(new_bag_tiles)
-
-    #     # Get the new bag-state.
-    #     new_bag_state = TileBagState(tiles=new_bag_tiles)  # type: ignore
-
-    #     # Get the new player-state.
-    #     current_player_state = state.player_to_state[state.current_player]
-    #     new_player_tiles = list[Tile]()
-    #     for tile in current_player_state.tiles:
-    #         if not tile in self.tiles:
-    #             new_player_tiles.append(tile)  # type: ignore
-    #     new_player_tiles.extend(drawn_tiles)  # type: ignore
-    #     new_player_state = PlayerState(
-    #         player=state.current_player,
-    #         score=current_player_state.score,
-    #         tiles=new_player_tiles,
-    #     )
-    #     new_player_to_state = dict(state.player_to_state)
-    #     new_player_to_state[state.current_player] = new_player_state
-
-    #     player_index = state.player_order.index(state.current_player)
-    #     next_index = get_next_player_index(player_index, len(state.player_order))
-    #     next_player = state.player_order[next_index]
-
-    #     return GameState(
-    #         config=state.config,
-    #         current_player=next_player,
-    #         player_order=state.player_order,
-    #         player_to_state=new_player_to_state,
-    #         bag_state=new_bag_state,
-    #         board_state=state.board_state,
-    #     )
-
 
 # Return the index of the next player.
 def get_next_player_index(index: int, num_players: int) -> int:
