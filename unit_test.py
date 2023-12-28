@@ -214,6 +214,43 @@ class UtilsTest(unittest.TestCase):
         )
         self.assertEqual(board, exp_board)
 
+    def test_get_place_tiles_move_from_string_1(self):
+        move = get_place_tiles_move_from_string("CAT")
+        exp_move = PlaceTilesMove(
+            position_to_placing={
+                (0, 0): LetterTilePlacing(tile=LetterTile("C")),
+                (1, 0): LetterTilePlacing(tile=LetterTile("A")),
+                (2, 0): LetterTilePlacing(tile=LetterTile("T")),
+            }
+        )
+        self.assertEqual(move, exp_move)
+
+    def test_get_place_tiles_move_from_string_2(self):
+        move = get_place_tiles_move_from_string("B\no\ng")
+        exp_move = PlaceTilesMove(
+            position_to_placing={
+                (0, 0): LetterTilePlacing(tile=LetterTile("B")),
+                (0, 1): BlankTilePlacing(tile=BlankTile(), letter="O"),
+                (0, 2): BlankTilePlacing(tile=BlankTile(), letter="G"),
+            }
+        )
+        self.assertEqual(move, exp_move)
+
+    def test_get_place_tiles_move_from_string_3(self):
+        # Test that we can make invalid moves with this. This is necessary for testing the is_valid() method.
+        move = get_place_tiles_move_from_string("CAT\nCAT")
+        exp_move = PlaceTilesMove(
+            position_to_placing={
+                (0, 0): LetterTilePlacing(tile=LetterTile("C")),
+                (1, 0): LetterTilePlacing(tile=LetterTile("A")),
+                (2, 0): LetterTilePlacing(tile=LetterTile("T")),
+                (0, 1): LetterTilePlacing(tile=LetterTile("C")),
+                (1, 1): LetterTilePlacing(tile=LetterTile("A")),
+                (2, 1): LetterTilePlacing(tile=LetterTile("T")),
+            }
+        )
+        self.assertEqual(move, exp_move)
+
 
 class StateTest(unittest.TestCase):
     def setUp(self):
@@ -446,6 +483,7 @@ class RulesTest(unittest.TestCase):
             max_tiles_in_hand=7,
             min_tiles_for_bingo=7,
             bingo_points=50,
+            scoreless_turns_to_end_game=6,
         )
         self.empty_state = GameState(
             config=self.empty_config,
@@ -458,6 +496,34 @@ class RulesTest(unittest.TestCase):
             bag_state=Bag(tiles=list()),
             board_state=get_board_from_strings(),
         )
+
+    def test_end_game_for_scoreless_turns(self):
+        state = self.empty_state.copy()
+        end_game_for_scoreless_turns(state)
+        self.assertFalse(state.game_finished)
+
+        state.num_scoreless_turns = 6
+        end_game_for_scoreless_turns(state)
+        self.assertTrue(state.game_finished)
+
+        state.num_scoreless_turns = 0
+        end_game_for_scoreless_turns(state)
+        self.assertTrue(state.game_finished)
+
+    def test_get_tile_to_count(self):
+        pairs = (
+            (list(), dict()),
+            ([LetterTile("A")], {LetterTile("A"): 1}),
+            ([LetterTile("A")] * 2, {LetterTile("A"): 2}),
+            (
+                [LetterTile("Q"), BlankTile(), LetterTile("F"), LetterTile("F")],
+                {LetterTile("Q"): 1, BlankTile(): 1, LetterTile("F"): 2},
+            ),
+            ([BlankTile()] * 3, {BlankTile(): 3}),
+        )
+        for tiles, exp_tile_to_count in pairs:
+            tile_to_count = get_tile_to_count(tiles)
+            self.assertDictEqual(tile_to_count, exp_tile_to_count)
 
     def test_get_next_player_index(self):
         pairs = (
@@ -483,6 +549,32 @@ class RulesTest(unittest.TestCase):
         advance_player(state)
         self.assertEqual(state.current_player, self.p0)
 
+    def test_all_tiles_available(self):
+        pairs = (
+            ((list(), list()), True),
+            ((list(), [LetterTile("A")]), False),
+            (([LetterTile("A")], list()), True),
+            (([LetterTile("A")], [LetterTile("A")]), True),
+            (([LetterTile("B")], [LetterTile("A")]), False),
+            (([LetterTile("B"), LetterTile("A")], [LetterTile("A")]), True),
+            (([LetterTile("B"), BlankTile()], [BlankTile()]), True),
+            ((list(), [BlankTile()]), False),
+        )
+        for (available, requested), exp_all_available in pairs:
+            all_available = all_tiles_available(
+                available_tiles=available, requested_tiles=requested
+            )
+            self.assertEqual(all_available, exp_all_available)
+
+    def test_get_adjacent_positions(self):
+        pairs = (
+            ([(0, 0)], [(-1, 0), (1, 0), (0, -1), (0, 1)]),
+            ([(0, 0), (1, 0)], [(-1, 0), (0, -1), (0, 1), (1, -1), (1, 1), (2, 0)]),
+        )
+        for positions, exp_adjacent in pairs:
+            adjacent = get_adjacent_positions(positions=positions)
+            self.assertCountEqual(adjacent, exp_adjacent)
+
     def test_pass_move_is_valid(self):
         move = PassMove()
         state = self.empty_state.copy()
@@ -497,6 +589,7 @@ class RulesTest(unittest.TestCase):
 
         exp_next_state = self.empty_state.copy()
         exp_next_state.current_player = self.p1
+        exp_next_state.num_scoreless_turns = 1
         self.assertEqual(next_state, exp_next_state)
 
     def test_pass_move_perform_2(self):
@@ -510,7 +603,17 @@ class RulesTest(unittest.TestCase):
 
         exp_next_state = state.copy()
         exp_next_state.current_player = self.p0
+        exp_next_state.num_scoreless_turns = 1
         self.assertEqual(next_state, exp_next_state)
+
+    def test_pass_move_perform_3(self):
+        move = PassMove()
+        state = self.empty_state.copy()
+        for _ in range(5):
+            move.perform(state)
+        self.assertFalse(state.game_finished)
+        move.perform(state)
+        self.assertTrue(state.game_finished)
 
     def test_exchange_tiles_move_is_valid_1(self):
         state = self.empty_state.copy()
@@ -564,6 +667,7 @@ class RulesTest(unittest.TestCase):
         exp_state.config.min_tiles_for_turn_in = 1
         exp_state.bag.tiles.append(LetterTile("B"))
         exp_state.player_to_state[self.p0].tiles.append(LetterTile("A"))
+        exp_state.num_scoreless_turns = 1
         exp_state.current_player = self.p1
 
         self.assertEqual(exp_state, state)
@@ -582,6 +686,249 @@ class RulesTest(unittest.TestCase):
         self.assertNotIn(LetterTile("O"), p0_state.tiles)
         self.assertEqual(len(p0_state.tiles), 1)
         self.assertIn(p0_state.tiles[0].letter, letters)  # type: ignore
+
+    def test_exchange_tiles_move_perform_3(self):
+        state = self.empty_state.copy()
+        state.config.min_tiles_for_turn_in = 0
+        move = ExchangeTilesMove(tiles=list())
+
+        for _ in range(5):
+            move.perform(state)
+        self.assertFalse(state.game_finished)
+        move.perform(state)
+        self.assertTrue(state.game_finished)
+
+    # Assert that the given tile-placement moves have the given orientations.
+    def _assert_orientation(
+        self,
+        board: Board,
+        tile_strings: Iterable[str],
+        horizontal: bool,
+        vertical: bool,
+    ) -> None:
+        for tile_string in tile_strings:
+            move = get_place_tiles_move_from_string(tile_string=tile_string)
+            self.assertEqual(
+                move._is_particular_linear_placement(
+                    board, parallel_coord="x", perpendicular_coord="y"
+                ),
+                horizontal,
+            )
+            self.assertEqual(
+                move._is_particular_linear_placement(
+                    board, parallel_coord="y", perpendicular_coord="x"
+                ),
+                vertical,
+            )
+            self.assertEqual(
+                move._is_any_linear_placement(board), horizontal or vertical
+            )
+
+    # Assert that the given tile-placement moves are horizontal.
+    def _assert_horizontal(self, board: Board, tile_strings: Iterable[str]) -> None:
+        self._assert_orientation(
+            board=board, tile_strings=tile_strings, horizontal=True, vertical=False
+        )
+
+    # Assert that the given tile-placement moves are vertical.
+    def _assert_vertical(self, board: Board, tile_strings: Iterable[str]) -> None:
+        self._assert_orientation(
+            board=board, tile_strings=tile_strings, horizontal=False, vertical=True
+        )
+
+    # Assert that the given tile-placement moves are neither horizontal nor vertical.
+    def _assert_neither_orientation(
+        self, board: Board, tile_strings: Iterable[str]
+    ) -> None:
+        self._assert_orientation(
+            board=board, tile_strings=tile_strings, horizontal=False, vertical=False
+        )
+
+    def test_place_tiles_move_is_particular_linear_placement_1(self):
+        state = self.empty_state.copy()
+
+        horizontal = (
+            "CAT",
+            "\nABACA",
+        )
+        self._assert_horizontal(board=state.board, tile_strings=horizontal)
+
+        vertical = (
+            "D\nO\ng",
+            "\n\n  O\n  A\n  T\n  M\n  E\n  A\n  L",
+        )
+        self._assert_vertical(board=state.board, tile_strings=vertical)
+
+        neither = (
+            "D G",
+            "C\n A\n  T",
+            "RA DIO",
+        )
+        self._assert_neither_orientation(board=state.board, tile_strings=neither)
+
+    def test_place_tiles_move_is_particular_linear_placement_2(self):
+        state = self.empty_state.copy()
+        move_1 = get_place_tiles_move_from_string("")
+        self.assertFalse(
+            move_1._is_particular_linear_placement(
+                board=state.board, parallel_coord="x", perpendicular_coord="y"
+            )
+        )
+        self.assertFalse(
+            move_1._is_particular_linear_placement(
+                board=state.board, parallel_coord="y", perpendicular_coord="x"
+            )
+        )
+
+    def test_place_tiles_move_is_particular_linear_placement_3(self):
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(
+            tile_string=(
+                "        \n"
+                "CATAPULT\n"
+                "       O\n"
+                "       P\n"
+                "       P\n"
+                "       L\n"
+                "       E\n"
+            )
+        )
+
+        horizontal = ("\n\n      N T", "\n\n\n      A E")
+        self._assert_horizontal(board=state.board, tile_strings=horizontal)
+
+        vertical = (
+            " B\n\n G",
+            "\n\nA\nR",
+        )
+        self._assert_vertical(board=state.board, tile_strings=vertical)
+
+        neither = (
+            "D G",
+            "C\n A\n  T",
+            "\nWITH",
+            "RA DIO",
+            "D\n\n\nG",
+        )
+        self._assert_neither_orientation(board=state.board, tile_strings=neither)
+
+    def test_place_tiles_move_get_words_made_1(self):
+        board = get_board_from_strings(tile_string="DA")
+        move = get_place_tiles_move_from_string(tile_string="\nAA")
+
+        new_words = (
+            get_word_on_board_from_string(tile_string="\nAA"),
+            get_word_on_board_from_string(tile_string="D\nA"),
+            get_word_on_board_from_string(tile_string=" A\n A"),
+        )
+        self.assertCountEqual(new_words, move.get_words_made(board=board))
+
+    def test_place_tiles_move_get_words_made_2(self):
+        board = get_board_from_strings(tile_string="DA")
+        move = get_place_tiles_move_from_string(tile_string="  B")
+
+        new_words = [get_word_on_board_from_string(tile_string="DAB")]
+        self.assertCountEqual(new_words, move.get_words_made(board=board))
+
+    def test_place_tiles_move_get_words_made_3(self):
+        board = get_board_from_strings(tile_string="INDEX")
+        move = get_place_tiles_move_from_string(tile_string="\n AEDILE")
+
+        new_words = (
+            get_word_on_board_from_string(tile_string="\n AEDILE"),
+            get_word_on_board_from_string(tile_string=" N\n A"),
+            get_word_on_board_from_string(tile_string="  D\n  E"),
+            get_word_on_board_from_string(tile_string="   E\n   D"),
+            get_word_on_board_from_string(tile_string="    X\n    I"),
+        )
+        self.assertCountEqual(new_words, move.get_words_made(board=board))
+
+    def test_place_tiles_move_is_valid_1(self):
+        move_1 = get_place_tiles_move_from_string(tile_string="DOGE")
+
+        # Test checking if the game is over.
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(tile_string="    \n    \n    ")
+        state.player_to_state[self.p0].tiles = [
+            LetterTile("D"),
+            LetterTile("O"),
+            LetterTile("G"),
+            LetterTile("E"),
+        ]
+        state.game_finished = True
+        self.assertFalse(move_1.is_valid(state=state))
+
+        # Test checking if the move has at least one tile.
+        move_2 = get_place_tiles_move_from_string(tile_string="")
+        self.assertFalse(move_2.is_valid(state=state))
+
+        # Test checking if the player has the tiles.
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(tile_string="    \n    \n    ")
+        state.player_to_state[self.p0].tiles = list()
+        self.assertFalse(move_1.is_valid(state=state))
+
+        # Test checking if the word fits on the board.
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(tile_string="   \n   \n   ")
+        state.player_to_state[self.p0].tiles = [
+            LetterTile("D"),
+            LetterTile("O"),
+            LetterTile("G"),
+            LetterTile("E"),
+        ]
+        self.assertFalse(move_1.is_valid(state=state))
+
+        # Test checking if the move places a tile onto a tile already on the board.
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(tile_string="APPLE")
+        state.player_to_state[self.p0].tiles = [
+            LetterTile("W"),
+            LetterTile("I"),
+            LetterTile("T"),
+            LetterTile("H"),
+        ]
+        move_3 = get_place_tiles_move_from_string(tile_string="WITH")
+        self.assertFalse(move_3.is_valid(state=state))
+
+        # Test checking if the move is in a line.
+        for tile_string in ("u nder", "b\n i\ng", "with in"):
+            state = self.empty_state.copy()
+            state.board = get_board_from_strings(
+                tile_string="       \n       \n       \n       "
+            )
+            state.player_to_state[self.p0].tiles = [BlankTile()] * 7
+            move_4 = get_place_tiles_move_from_string(tile_string=tile_string)
+            self.assertFalse(move_4.is_valid(state=state))
+
+        # Test checking that, if there are no tiles on the board, the move covers the starting position.
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(tile_string="       ")
+        state.board.starting_position = (3, 0)
+        state.player_to_state[self.p0].tiles = [
+            LetterTile("D"),
+            LetterTile("O"),
+            LetterTile("G"),
+        ]
+        move_5 = get_place_tiles_move_from_string(tile_string="DOG")
+        self.assertFalse(move_5.is_valid(state=state))
+
+        # Test checking that, if any tiles are placed, at least one tile in the move is adjacent to a tile on the board.
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(tile_string="CAT\n   \n   ")
+        state.player_to_state[self.p0].tiles = [
+            LetterTile("D"),
+            LetterTile("O"),
+            LetterTile("G"),
+        ]
+        move_6 = get_place_tiles_move_from_string(tile_string="\n\nDOG")
+        self.assertFalse(move_6.is_valid(state=state))
+
+        # Test checking if the move makes at least one word.
+        state = self.empty_state.copy()
+        move_7 = get_place_tiles_move_from_string(tile_string="A")
+        state.player_to_state[self.p0].tiles = [LetterTile("A")]
+        self.assertFalse(move_7.is_valid(state=state))
 
 
 if __name__ == "__main__":  #

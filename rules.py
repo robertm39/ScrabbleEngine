@@ -39,116 +39,184 @@ class Move(ABC):
 # A move where a single word is placed.
 @dataclass
 class PlaceTilesMove(Move):
-    tile_placings: Mapping[BoardPosition, TilePlacing]
+    position_to_placing: Mapping[BoardPosition, TilePlacing]
 
-    def __init__(self, tile_placings: Mapping[BoardPosition, TilePlacing]) -> None:
-        self.tile_placings = frozendict(tile_placings)
+    def __init__(
+        self, position_to_placing: Mapping[BoardPosition, TilePlacing]
+    ) -> None:
+        self.position_to_placing = frozendict(position_to_placing)
 
-    # # Return all of the words made by this move.
-    # def get_words_made(self, board_state: BoardState) -> list[WordOnBoard]:
-    #     # First, see what words were already on the board.
-    #     all_previous_words = board_state.get_words()
+    # Return all of the words made by this move.
+    def get_words_made(self, board: Board) -> list[WordOnBoard]:
+        # First, see what words were already on the board.
+        all_previous_words = board.get_words()
 
-    #     new_position_to_tile = dict(board_state.position_to_tile)
-    #     for placing in self.tile_placings:
-    #         # new_position_to_tile[placing.position] = placing.tile
-    #         new_position_to_tile[placing.position] = placing
-    #     new_state = BoardState(position_to_tile=new_position_to_tile)
-    #     all_words = new_state.get_words()
-    #     return [w for w in all_words if w not in all_previous_words]
+        new_position_to_tile = dict(board.position_to_tile)
+        for position, placing in self.position_to_placing.items():
+            # new_position_to_tile[placing.position] = placing.tile
+            if isinstance(placing, BlankTilePlacing):
+                tile = BlankTile(letter=placing.letter)
+            else:
+                tile = placing.tile
 
-    # # Return whether this placement is linear, either top-to-bottom or left-to-right.
-    # def _is_particular_linear_placement(
-    #     self, board_state: BoardState, parallel_coord: str, perpendicular_coord: str
-    # ) -> bool:
-    #     def get_par(position: BoardPosition) -> int:
-    #         return getattr(position, parallel_coord)
+            new_position_to_tile[position] = tile
+        new_state = Board(
+            width=board.width,
+            height=board.height,
+            position_to_tile=new_position_to_tile,
+            position_to_multiplier=board.position_to_multiplier,
+        )
+        all_words = new_state.get_words()
+        return [w for w in all_words if w not in all_previous_words]
 
-    #     def get_prp(position: BoardPosition) -> int:
-    #         return getattr(position, perpendicular_coord)
+    # Return whether this placement is linear, either top-to-bottom or left-to-right.
+    def _is_particular_linear_placement(
+        self, board: Board, parallel_coord: str, perpendicular_coord: str
+    ) -> bool:
+        def get_index(coord: str):
+            return 0 if coord == "x" else 1
 
-    #     # At least one tile must be placed.
-    #     if len(self.tile_placings) == 0:
-    #         return False
+        def get_par(position: BoardPosition) -> int:
+            # return getattr(position, parallel_coord)
+            return position[get_index(coord=parallel_coord)]
 
-    #     # If not all of the letters have the same perpendicular-coordinate, it isn't a linear word.
-    #     if len([get_prp(placing.position) for placing in self.tile_placings]) > 1:
-    #         return False
+        def get_prp(position: BoardPosition) -> int:
+            # return getattr(position, perpendicular_coord)
+            return position[get_index(coord=perpendicular_coord)]
 
-    #     prp = get_prp(self.tile_placings[0].position)
+        # At least one tile must be placed.
+        if len(self.position_to_placing) == 0:
+            return False
 
-    #     # Determine the top and bottom ends of the word.
-    #     min_par = min([get_par(placing.position) for placing in self.tile_placings])
-    #     max_par = max([get_par(placing.position) for placing in self.tile_placings])
+        # If not all of the letters have the same perpendicular-coordinate, it isn't a linear word.
+        if len({get_prp(position) for position in self.position_to_placing}) > 1:
+            return False
 
-    #     # No two tiles may be in the same position.
-    #     covered_positions = set[int]()
-    #     for placing in self.tile_placings:
-    #         if get_par(placing.position) in covered_positions:
-    #             return False
-    #         covered_positions.add(get_par(placing.position))
+        pairs = list(self.position_to_placing.items())
 
-    #     # Each spot in-between the two tiles must be covered,
-    #     # either by a tile already on the board or by a tile in the move.
-    #     for par in range(min_par, max_par + 1):
-    #         if (
-    #             board_state.get_tile_at(
-    #                 BoardPosition(**{parallel_coord: par, perpendicular_coord: prp})
-    #             )
-    #             is None
-    #         ) and (par not in covered_positions):
-    #             return False
+        prp = get_prp(pairs[0][0])
 
-    #     return True
+        # Determine the top and bottom ends of the word.
+        min_par = min([get_par(position) for position in self.position_to_placing])
+        max_par = max([get_par(position) for position in self.position_to_placing])
 
-    # # Return whether this move is any linear placement.
-    # def _is_any_linear_placement(self, board_state: BoardState) -> bool:
-    #     return self._is_particular_linear_placement(
-    #         board_state=board_state, parallel_coord="x", perpendicular_coord="y"
-    #     ) or self._is_particular_linear_placement(
-    #         board_state=board_state, parallel_coord="y", perpendicular_coord="x"
-    #     )
+        # # No two tiles may be in the same position.
+        covered_positions = set[int]()
+        for position in self.position_to_placing:
+            #     if get_par(position) in covered_positions:
+            #         return False
+            covered_positions.add(get_par(position))
 
-    # def is_valid(self, state: GameState) -> bool:
-    #     # A move must place at least one tile.
-    #     if len(self.tile_placings) == 0:
-    #         return False
+        # Each spot in-between the two tiles must be covered,
+        # either by a tile already on the board or by a tile in the move, but not both.
+        for par in range(min_par, max_par + 1):
+            board_has_tile = (
+                board.get_tile_at(
+                    get_board_position(
+                        **{parallel_coord: par, perpendicular_coord: prp}
+                    )
+                )
+                is not None
+            )
+            move_has_tile = par in covered_positions
+            if board_has_tile and move_has_tile:
+                return False
+            if not (board_has_tile or move_has_tile):
+                return False
+            # if (
+            #     # board_state.get_tile_at(
+            #     #     BoardPosition(**{parallel_coord: par, perpendicular_coord: prp})
+            #     # )
+            #     board.get_tile_at(
+            #         get_board_position(
+            #             **{parallel_coord: par, perpendicular_coord: prp}
+            #         )
+            #     )
+            #     is None
+            # ) and (par not in covered_positions):
+            #     return False
 
-    #     # If the move uses the same tile multiple times, it isn't valid.
-    #     used_tiles = set[Tile]()
-    #     for placing in self.tile_placings:
-    #         if placing.tile in used_tiles:
-    #             return False
-    #         used_tiles.add(placing.tile)
+        return True
 
-    #     # If the move uses tiles the active player doesn't have, it isn't valid.
-    #     current_player_state = state.player_to_state[state.current_player]
-    #     for placing in self.tile_placings:
-    #         if not placing.tile in current_player_state.tiles:
-    #             return False
+    # Return whether this move is any linear placement.
+    def _is_any_linear_placement(self, board: Board) -> bool:
+        return self._is_particular_linear_placement(
+            board=board, parallel_coord="x", perpendicular_coord="y"
+        ) or self._is_particular_linear_placement(
+            board=board, parallel_coord="y", perpendicular_coord="x"
+        )
 
-    #     # If the move places a tile outside the board, it isn't valid.
-    #     for placing in self.tile_placings:
-    #         if not state.config.board_config.contains_position(placing.position):
-    #             return False
+    def is_valid(self, state: GameState) -> bool:
+        # You can't do any moves if the game if over.
+        if state.game_finished:
+            return False
 
-    #     # If the move places a tile onto a tile already on the board, it isn't valid.
-    #     for placing in self.tile_placings:
-    #         if state.board_state.get_tile_at(placing.position) is not None:
-    #             return False
+        # A move must place at least one tile.
+        if len(self.position_to_placing) == 0:
+            return False
 
-    #     # The move must be in a line, either from left to right or from top to bottom.
-    #     if not self._is_any_linear_placement(board_state=state.board_state):
-    #         return False
+        player_state = state.player_to_state[state.current_player]
 
-    #     # All words made by this placement must be in the dictionary.
-    #     new_words = self.get_words_made(board_state=state.board_state)
-    #     new_word_vals = [w.get_word() for w in new_words]
-    #     for word in new_word_vals:
-    #         if not word in state.config.playable_words:
-    #             return False
+        # Check if the player has all of the tiles to be played.
+        move_tiles = [placing.tile for placing in self.position_to_placing.values()]
+        if not all_tiles_available(
+            available_tiles=player_state.tiles, requested_tiles=move_tiles
+        ):
+            return False
 
-    #     return True
+        # If the move places a tile outside the board, it isn't valid.
+        for position in self.position_to_placing:
+            if not state.board.contains_position(position):
+                return False
+
+        # If the move places a tile onto a tile already on the board, it isn't valid.
+        for position in self.position_to_placing:
+            if state.board.get_tile_at(position) is not None:
+                return False
+
+        # The move must be in a line, either from left to right or from top to bottom.
+        if not self._is_any_linear_placement(board=state.board):
+            return False
+
+        # At least one tile in the move must be adjacent to a tile already on the board,
+        # unless there are no tiles already on the board, in which case the move
+        # must place at least one tile on the designated starting position.
+        if len(state.board.position_to_tile) == 0:
+            if state.board.starting_position is not None:
+                on_starting_position = False
+                for position in self.position_to_placing:
+                    if position == state.board.starting_position:
+                        on_starting_position = True
+                        break
+                if not on_starting_position:
+                    return False
+        else:
+            adj_to_board = get_adjacent_positions(
+                positions=state.board.position_to_tile
+            )
+            one_adj_to_board = False
+            for position in self.position_to_placing:
+                if position in adj_to_board:
+                    one_adj_to_board = True
+                    break
+            if not one_adj_to_board:
+                return False
+
+        # All words made by this placement must be in the dictionary.
+        new_words = self.get_words_made(board=state.board)
+        new_word_vals = [w.get_word() for w in new_words]
+        for word in new_word_vals:
+            if not word in state.config.playable_words:
+                return False
+
+        # The move must make at least one new word.
+        if len(new_words) == 0:
+            return False
+
+        return True
+
+    def perform(self, state: GameState) -> None:
+        ...  # TODO implement.
 
     # # Return the number of points scored in a particular word in this move.
     # def get_points_for_word(self, state: GameState, word: WordOnBoard) -> int:
@@ -254,6 +322,21 @@ def get_tile_to_count(tiles: Iterable[Tile]) -> Mapping[Tile, int]:
     return tile_to_count
 
 
+# Return whether all of the requested tiles are available.
+def all_tiles_available(
+    available_tiles: Iterable[Tile], requested_tiles: Iterable[Tile]
+) -> bool:
+    available_tile_to_count = get_tile_to_count(tiles=available_tiles)
+    req_tile_to_count = get_tile_to_count(requested_tiles)
+
+    for tile, req_count in req_tile_to_count.items():
+        available_count = available_tile_to_count.get(tile, 0)
+        if available_count < req_count:
+            return False
+
+    return True
+
+
 # A move where some tiles are exchanged for new tiles.
 @dataclass
 class ExchangeTilesMove(Move):
@@ -269,16 +352,21 @@ class ExchangeTilesMove(Move):
             return False
 
         # Check that the player is only turning in tiles he has.
-        # TODO compute this once and store the result to save time.
-        move_tile_to_count = get_tile_to_count(self.tiles)
+        if not all_tiles_available(
+            available_tiles=state.player_to_state[state.current_player].tiles,
+            requested_tiles=self.tiles,
+        ):
+            return False
+        # # TODO compute this once and store the result to save time.
+        # move_tile_to_count = get_tile_to_count(self.tiles)
 
-        player_tiles = state.player_to_state[state.current_player].tiles
-        player_tile_to_count = get_tile_to_count(player_tiles)
+        # player_tiles = state.player_to_state[state.current_player].tiles
+        # player_tile_to_count = get_tile_to_count(player_tiles)
 
-        for tile, move_count in move_tile_to_count.items():
-            player_count = player_tile_to_count.get(tile, 0)
-            if player_count < move_count:
-                return False
+        # for tile, move_count in move_tile_to_count.items():
+        #     player_count = player_tile_to_count.get(tile, 0)
+        #     if player_count < move_count:
+        #         return False
 
         # You can only turn in tiles if at least seven tiles are in the bag.
         if len(state.bag.tiles) < state.config.min_tiles_for_turn_in:
@@ -287,6 +375,9 @@ class ExchangeTilesMove(Move):
         return True
 
     def perform(self, state: GameState) -> None:
+        state.num_scoreless_turns += 1
+        end_game_for_scoreless_turns(state)
+
         player_state = state.player_to_state[state.current_player]
 
         # Remove the tiles to be exchanged from the player's tiles.
@@ -322,6 +413,7 @@ def get_next_player_index(index: int, num_players: int) -> int:
     return result
 
 
+# Advance play to the next player.
 def advance_player(state: GameState) -> None:
     state.current_player = Player(
         get_next_player_index(
@@ -330,12 +422,20 @@ def advance_player(state: GameState) -> None:
     )
 
 
+# End the game if enough scoreless turns have passed.
+def end_game_for_scoreless_turns(state: GameState) -> None:
+    if state.num_scoreless_turns >= state.config.scoreless_turns_to_end_game:
+        state.game_finished = True
+
+
 # A move where the player passes.
 class PassMove(Move):
     def is_valid(self, state: GameState) -> bool:
         return not state.game_finished
 
     def perform(self, state: GameState) -> None:
+        state.num_scoreless_turns += 1
+        end_game_for_scoreless_turns(state)
         advance_player(state)
 
 

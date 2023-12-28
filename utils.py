@@ -1,6 +1,7 @@
 from typing import Generator
 
 from game_state import *
+from rules import *
 
 
 # Return the dimensions of the board contained withing the given string.
@@ -98,3 +99,18 @@ def get_board_from_strings(
 def get_word_on_board_from_string(tile_string: str) -> WordOnBoard:
     position_to_tile = get_position_to_tile_from_string(tile_string=tile_string)
     return WordOnBoard(position_to_tile=position_to_tile)
+
+
+# Return the tile-placing move contained in the given string.
+def get_place_tiles_move_from_string(tile_string: str) -> PlaceTilesMove:
+    position_to_placing = dict[BoardPosition, TilePlacing]()
+    position_to_tile = get_position_to_tile_from_string(tile_string=tile_string)
+    for position, tile in position_to_tile.items():
+        if isinstance(tile, LetterTile):
+            position_to_placing[position] = LetterTilePlacing(tile=tile)
+            continue
+        if isinstance(tile, BlankTile):
+            position_to_placing[position] = BlankTilePlacing(tile=BlankTile(), letter=tile.letter)  # type: ignore
+            continue
+    return PlaceTilesMove(position_to_placing=position_to_placing)
+

@@ -73,6 +73,12 @@ class BlankTile(Tile):
 
 
 BoardPosition = tuple[int, int]
+
+
+def get_board_position(x: int, y: int) -> BoardPosition:
+    return x, y
+
+
 # # A position on the Scrabble board.
 # @dataclass
 # class BoardPosition:
@@ -164,6 +170,7 @@ class ScrabbleConfig:
     max_tiles_in_hand: int
     min_tiles_for_bingo: int
     bingo_points: int
+    scoreless_turns_to_end_game: int
 
     def __init__(
         self,
@@ -172,12 +179,14 @@ class ScrabbleConfig:
         max_tiles_in_hand: int,
         min_tiles_for_bingo: int,
         bingo_points: int,
+        scoreless_turns_to_end_game: int,
     ):
-        self.playable_words = set(playable_words)
+        self.playable_words = frozenset(playable_words)
         self.min_tiles_for_turn_in = min_tiles_for_turn_in
         self.max_tiles_in_hand = max_tiles_in_hand
         self.min_tiles_for_bingo = min_tiles_for_bingo
         self.bingo_points = bingo_points
+        self.scoreless_turns_to_end_game = scoreless_turns_to_end_game
 
 
 # A player in the game.
@@ -338,11 +347,26 @@ class WordOnBoard:
         return "".join(letters)
 
 
+# Return all positions adjacent to one of the given positions, but not equal to one of the given positions.
+def get_adjacent_positions(positions: Iterable[BoardPosition]) -> set[BoardPosition]:
+    positions = set(positions)
+    result = set[BoardPosition]()
+
+    for x, y in positions:
+        result.add((x + 1, y))
+        result.add((x - 1, y))
+        result.add((x, y + 1))
+        result.add((x, y - 1))
+
+    return {p for p in result if p not in positions}
+
+
 # The state of the board.
 @dataclass
 class Board:
     width: int
     height: int
+    starting_position: BoardPosition | None
     position_to_tile: Mapping[BoardPosition, Tile]
     position_to_multiplier: Mapping[BoardPosition, Multiplier]
 
@@ -352,11 +376,22 @@ class Board:
         height: int,
         position_to_tile: Mapping[BoardPosition, Tile],
         position_to_multiplier: Mapping[BoardPosition, Multiplier],
+        starting_position: BoardPosition | None = None,
     ) -> None:
         self.width = width
         self.height = height
+        self.starting_position = starting_position
         self.position_to_tile = dict(position_to_tile)
         self.position_to_multiplier = frozendict(position_to_multiplier)
+
+    # Return whether the given position is on the board.
+    def contains_position(self, position: BoardPosition) -> bool:
+        x, y = position
+        if x < 0 or y < 0:
+            return False
+        if x >= self.width or y >= self.height:
+            return False
+        return True
 
     # Return the tile at the given position, or None if there is none.
     def get_tile_at(self, position: BoardPosition) -> Tile | None:
@@ -449,6 +484,7 @@ class GameState:
     player_to_state: Mapping[Player, PlayerState]
     bag: Bag
     board: Board
+    num_scoreless_turns: int = 0
     game_finished: bool = False
 
     def __init__(
