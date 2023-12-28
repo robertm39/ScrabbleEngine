@@ -35,7 +35,6 @@ class Move(ABC):
         ...
 
 
-# TODO change.
 # A move where a single word is placed.
 @dataclass
 class PlaceTilesMove(Move):
@@ -53,7 +52,6 @@ class PlaceTilesMove(Move):
 
         new_position_to_tile = dict(board.position_to_tile)
         for position, placing in self.position_to_placing.items():
-            # new_position_to_tile[placing.position] = placing.tile
             if isinstance(placing, BlankTilePlacing):
                 tile = BlankTile(letter=placing.letter)
             else:
@@ -77,11 +75,9 @@ class PlaceTilesMove(Move):
             return 0 if coord == "x" else 1
 
         def get_par(position: BoardPosition) -> int:
-            # return getattr(position, parallel_coord)
             return position[get_index(coord=parallel_coord)]
 
         def get_prp(position: BoardPosition) -> int:
-            # return getattr(position, perpendicular_coord)
             return position[get_index(coord=perpendicular_coord)]
 
         # At least one tile must be placed.
@@ -103,8 +99,6 @@ class PlaceTilesMove(Move):
         # # No two tiles may be in the same position.
         covered_positions = set[int]()
         for position in self.position_to_placing:
-            #     if get_par(position) in covered_positions:
-            #         return False
             covered_positions.add(get_par(position))
 
         # Each spot in-between the two tiles must be covered,
@@ -123,18 +117,6 @@ class PlaceTilesMove(Move):
                 return False
             if not (board_has_tile or move_has_tile):
                 return False
-            # if (
-            #     # board_state.get_tile_at(
-            #     #     BoardPosition(**{parallel_coord: par, perpendicular_coord: prp})
-            #     # )
-            #     board.get_tile_at(
-            #         get_board_position(
-            #             **{parallel_coord: par, perpendicular_coord: prp}
-            #         )
-            #     )
-            #     is None
-            # ) and (par not in covered_positions):
-            #     return False
 
         return True
 
@@ -357,16 +339,6 @@ class ExchangeTilesMove(Move):
             requested_tiles=self.tiles,
         ):
             return False
-        # # TODO compute this once and store the result to save time.
-        # move_tile_to_count = get_tile_to_count(self.tiles)
-
-        # player_tiles = state.player_to_state[state.current_player].tiles
-        # player_tile_to_count = get_tile_to_count(player_tiles)
-
-        # for tile, move_count in move_tile_to_count.items():
-        #     player_count = player_tile_to_count.get(tile, 0)
-        #     if player_count < move_count:
-        #         return False
 
         # You can only turn in tiles if at least seven tiles are in the bag.
         if len(state.bag.tiles) < state.config.min_tiles_for_turn_in:
