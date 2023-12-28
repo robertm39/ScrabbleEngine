@@ -1,5 +1,5 @@
 from typing import Self, Literal, Mapping, Collection, Sequence, Iterable
-from abc import ABC, abstractmethod
+import copy
 from dataclasses import dataclass
 from frozendict import frozendict
 
@@ -54,12 +54,18 @@ class LetterTile(Tile):
     letter: LETTER
     # points: int
 
+    def __hash__(self) -> int:
+        return hash(self.letter)
+
 
 # A tile with nothing on it.
 @dataclass
 class BlankTile(Tile):
     letter: LETTER | None = None
     # points: int
+
+    def __hash__(self) -> int:
+        return hash(self.letter)
 
 
 # # Any tile.
@@ -154,6 +160,7 @@ Multiplier = WordMultiplier | TileMultiplier
 @dataclass
 class ScrabbleConfig:
     playable_words: Collection[WORD]
+    min_tiles_for_turn_in: int
     max_tiles_in_hand: int
     min_tiles_for_bingo: int
     bingo_points: int
@@ -161,11 +168,13 @@ class ScrabbleConfig:
     def __init__(
         self,
         playable_words: Iterable[WORD],
+        min_tiles_for_turn_in: int,
         max_tiles_in_hand: int,
         min_tiles_for_bingo: int,
         bingo_points: int,
     ):
         self.playable_words = set(playable_words)
+        self.min_tiles_for_turn_in = min_tiles_for_turn_in
         self.max_tiles_in_hand = max_tiles_in_hand
         self.min_tiles_for_bingo = min_tiles_for_bingo
         self.bingo_points = bingo_points
@@ -186,6 +195,11 @@ class PlayerState:
     player: Player
     score: int
     tiles: list[Tile]
+
+    def __init__(self, player: Player, score: int, tiles: Iterable[Tile]) -> None:
+        self.player = player
+        self.score = score
+        self.tiles = list(tiles)
 
     def get_visible_to(self, p: Player) -> "VISIBLE_PLAYER_STATE":
         if p == self.player:
@@ -322,9 +336,6 @@ class WordOnBoard:
         pairs.sort(key=lambda p: p[0][0] + p[0][1])
         letters = [p[1].letter for p in pairs]  # type: ignore
         return "".join(letters)
-        # placings = list(self.position_to_tile.values())
-        # placings.sort(key=lambda p: p.position)
-        # return "".join([p.letter for p in placings])
 
 
 # The state of the board.
@@ -366,61 +377,67 @@ class Board:
     def get_visible_to(self, p: Player) -> Self:
         return self
 
-    # # Return all of the words on the board.
-    # def get_words(self) -> list[WordOnBoard]:
-    #     result = list[WordOnBoard]()
+    # Return all of the words on the board.
+    def get_words(self) -> list[WordOnBoard]:
+        result = list[WordOnBoard]()
 
-    #     # Find all of the left-to-right words.
-    #     # Find all of the tiles with no tile to their left.
-    #     possible_l_to_r_word_starts = list[BoardPosition]()
-    #     for position in self.position_to_tile:
-    #         to_left = BoardPosition(x=position.x - 1, y=position.y)
-    #         if self.get_tile_at(to_left) is None:
-    #             possible_l_to_r_word_starts.append(position)
+        # Find all of the left-to-right words.
+        # Find all of the tiles with no tile to their left.
+        possible_l_to_r_word_starts = list[BoardPosition]()
+        for position in self.position_to_tile:
+            # to_left = BoardPosition(x=position.x - 1, y=position.y)
+            to_left = position[0] - 1, position[1]
+            if self.get_tile_at(to_left) is None:
+                possible_l_to_r_word_starts.append(position)
 
-    #     # For each of these tiles, find the sequence of tiles extending to the right from it.
-    #     for word_start in possible_l_to_r_word_starts:
-    #         # Find all of the tiles in the word.
-    #         word_position_to_tile = dict[BoardPosition, TilePlacing]()
-    #         current_position = word_start
-    #         while True:
-    #             current_tile = self.get_tile_at(current_position)
-    #             if current_tile is None:
-    #                 break
-    #             word_position_to_tile[current_position] = current_tile
-    #             current_position = BoardPosition(
-    #                 x=current_position.x + 1, y=current_position.y
-    #             )
-    #         if len(word_position_to_tile) <= 1:
-    #             continue
-    #         result.append(WordOnBoard(position_to_tile=word_position_to_tile))
+        # For each of these tiles, find the sequence of tiles extending to the right from it.
+        for word_start in possible_l_to_r_word_starts:
+            # Find all of the tiles in the word.
+            # word_position_to_tile = dict[BoardPosition, TilePlacing]()
+            word_position_to_tile = dict[BoardPosition, Tile]()
+            current_position = word_start
+            while True:
+                current_tile = self.get_tile_at(current_position)
+                if current_tile is None:
+                    break
+                word_position_to_tile[current_position] = current_tile
+                # current_position = BoardPosition(
+                #     x=current_position.x + 1, y=current_position.y
+                # )
+                current_position = current_position[0] + 1, current_position[1]
+            if len(word_position_to_tile) <= 1:
+                continue
+            result.append(WordOnBoard(position_to_tile=word_position_to_tile))
 
-    #     # Find all of the top-to-bottom words.
-    #     # Find all of the tiles with no tile above them.
-    #     possible_t_to_b_word_starts = list[BoardPosition]()
-    #     for position in self.position_to_tile:
-    #         to_up = BoardPosition(x=position.x, y=position.y - 1)
-    #         if self.get_tile_at(to_up) is None:
-    #             possible_t_to_b_word_starts.append(position)
+        # Find all of the top-to-bottom words.
+        # Find all of the tiles with no tile above them.
+        possible_t_to_b_word_starts = list[BoardPosition]()
+        for position in self.position_to_tile:
+            # to_up = BoardPosition(x=position.x, y=position.y - 1)
+            to_up = position[0], position[1] - 1
+            if self.get_tile_at(to_up) is None:
+                possible_t_to_b_word_starts.append(position)
 
-    #     # For each of these tiles, find the sequence of tiles extending down from it.
-    #     for word_start in possible_t_to_b_word_starts:
-    #         # Find all of the tiles in the word.
-    #         word_position_to_tile = dict[BoardPosition, TilePlacing]()
-    #         current_position = word_start
-    #         while True:
-    #             current_tile = self.get_tile_at(current_position)
-    #             if current_tile is None:
-    #                 break
-    #             word_position_to_tile[current_position] = current_tile
-    #             current_position = BoardPosition(
-    #                 x=current_position.x, y=current_position.y + 1
-    #             )
-    #         if len(word_position_to_tile) <= 1:
-    #             continue
-    #         result.append(WordOnBoard(position_to_tile=word_position_to_tile))
+        # For each of these tiles, find the sequence of tiles extending down from it.
+        for word_start in possible_t_to_b_word_starts:
+            # Find all of the tiles in the word.
+            # word_position_to_tile = dict[BoardPosition, TilePlacing]()
+            word_position_to_tile = dict[BoardPosition, Tile]()
+            current_position = word_start
+            while True:
+                current_tile = self.get_tile_at(current_position)
+                if current_tile is None:
+                    break
+                word_position_to_tile[current_position] = current_tile
+                # current_position = BoardPosition(
+                #     x=current_position.x, y=current_position.y + 1
+                # )
+                current_position = current_position[0], current_position[1] + 1
+            if len(word_position_to_tile) <= 1:
+                continue
+            result.append(WordOnBoard(position_to_tile=word_position_to_tile))
 
-    #     return result
+        return result
 
 
 # The state of the entire game.
@@ -430,8 +447,8 @@ class GameState:
     current_player: Player
     player_order: Sequence[Player]
     player_to_state: Mapping[Player, PlayerState]
-    bag_state: Bag
-    board_state: Board
+    bag: Bag
+    board: Board
     game_finished: bool = False
 
     def __init__(
@@ -448,9 +465,13 @@ class GameState:
         self.current_player = current_player
         self.player_to_state = dict(player_to_state)
         self.player_order = tuple(player_order)
-        self.bag_state = bag_state
-        self.board_state = board_state
+        self.bag = bag_state
+        self.board = board_state
         self.game_finished = game_finished
+
+    # Return a deep copy of this GameState.
+    def copy(self) -> Self:
+        return copy.deepcopy(self)
 
     # TODO get_visible_to(p: Player) -> VisibleGameState
 

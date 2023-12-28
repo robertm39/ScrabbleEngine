@@ -6,27 +6,33 @@ from random import shuffle
 from game_state import *
 from game_state import BoardPosition, GameState
 
+
 @dataclass
 class LetterTilePlacing:
     tile: LetterTile
+
 
 @dataclass
 class BlankTilePlacing:
     tile: BlankTile
     letter: LETTER
 
+
 # A placing of any tile.
 TilePlacing = LetterTilePlacing | BlankTilePlacing
 
 
+# Any Scrabble move.
 class Move(ABC):
+    # Return whether this move is valid in the given state.
     @abstractmethod
     def is_valid(self, state: GameState) -> bool:
         ...
 
-    # @abstractmethod
-    # def get_next_state(self, state: GameState) -> GameState:
-    #     ...
+    # Perform this move by changing the given state.
+    @abstractmethod
+    def perform(self, state: GameState) -> None:
+        ...
 
 
 # TODO change.
@@ -238,31 +244,74 @@ class PlaceTilesMove(Move):
     #     )
 
 
+# Return the mapping from a tile to the number of times it occurs in the given list. TODO generify(?).
+def get_tile_to_count(tiles: Iterable[Tile]) -> Mapping[Tile, int]:
+    tile_to_count = dict[Tile, int]()
+
+    for tile in tiles:
+        prev_count = tile_to_count.get(tile, 0)
+        tile_to_count[tile] = prev_count + 1
+    return tile_to_count
+
+
 # A move where some tiles are exchanged for new tiles.
 @dataclass
 class ExchangeTilesMove(Move):
     tiles: list[Tile]
 
+    def __init__(self, tiles: Iterable[Tile]) -> None:
+        self.tiles = list(tiles)
+
     def is_valid(self, state: GameState) -> bool:
+        # TODO make a downcall in the base-class so I don't have to code this repeatedly(?).
+        # You can't do any moves if the game is over.
+        if state.game_finished:
+            return False
+
+        # Check that the player is only turning in tiles he has.
+        # TODO compute this once and store the result to save time.
+        move_tile_to_count = get_tile_to_count(self.tiles)
+
         player_tiles = state.player_to_state[state.current_player].tiles
+        player_tile_to_count = get_tile_to_count(player_tiles)
 
-        # You can only exchange tiles that you have.
-        for tile in self.tiles:
-            if not tile in player_tiles:
+        for tile, move_count in move_tile_to_count.items():
+            player_count = player_tile_to_count.get(tile, 0)
+            if player_count < move_count:
                 return False
-
-        # You can't have duplicates in the list of tiles to turn in.
-        prev_tiles = list[Tile]()
-        for tile in self.tiles:
-            if tile in prev_tiles:
-                return False
-            prev_tiles.append(tile)
 
         # You can only turn in tiles if at least seven tiles are in the bag.
-        if len(state.bag_state.tiles) < 7:
+        if len(state.bag.tiles) < state.config.min_tiles_for_turn_in:
             return False
 
         return True
+
+    def perform(self, state: GameState) -> None:
+        player_state = state.player_to_state[state.current_player]
+
+        # Remove the tiles to be exchanged from the player's tiles.
+        for tile in self.tiles:
+            try:
+                player_state.tiles.remove(tile)
+            except ValueError:
+                # We tried to remove a tile that wasn't there. The is_valid() method should have caught this.
+                pass
+
+        # Give the player the same number of tiles (or as many as possible) from the bag.
+        tiles_to_draw = min(len(self.tiles), len(state.bag.tiles))
+        shuffle(state.bag.tiles)
+        drawn_tiles, remaining_tiles = (
+            state.bag.tiles[:tiles_to_draw],
+            state.bag.tiles[tiles_to_draw:],
+        )
+        player_state.tiles.extend(drawn_tiles)
+
+        # Put the player's tiles into the bag and shuffle it.
+        state.bag.tiles = remaining_tiles + self.tiles
+        shuffle(state.bag.tiles)
+
+        # Finally, advance to the next player.
+        advance_player(state)
 
     # # Return the state after exchanging these tiles.
     # def get_next_state(self, state: GameState) -> GameState:
@@ -316,26 +365,21 @@ def get_next_player_index(index: int, num_players: int) -> int:
     return result
 
 
+def advance_player(state: GameState) -> None:
+    state.current_player = Player(
+        get_next_player_index(
+            state.current_player.position, num_players=len(state.player_order)
+        )
+    )
+
+
 # A move where the player passes.
 class PassMove(Move):
     def is_valid(self, state: GameState) -> bool:
-        return True
+        return not state.game_finished
 
-    # # Return the next state after passing. The only thing that changes is whose turn it is.
-    # def get_next_state(self, state: GameState) -> GameState:
-    #     player_index = state.player_order.index(state.current_player)
-    #     next_index = get_next_player_index(player_index, len(state.player_order))
-    #     next_player = state.player_order[next_index]
-
-    #     return GameState(
-    #         config=state.config,
-    #         current_player=next_player,
-    #         player_order=state.player_order,
-    #         player_to_state=state.player_to_state,
-    #         bag_state=state.bag_state,
-    #         board_state=state.board_state,
-    #         game_finished=state.game_finished,
-    #     )
+    def perform(self, state: GameState) -> None:
+        advance_player(state)
 
 
 # A move-getter. Either an AI or a human player.

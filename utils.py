@@ -5,16 +5,13 @@ from game_state import *
 
 # Return the dimensions of the board contained withing the given string.
 def get_dimensions_from_string(s) -> tuple[int, int]:
-    # if s[-1] == "\n":
-    #     s = s[:-1]
-
     if len(s) == 0:
         return 0, 0
 
     lines = s.split("\n")
     if len(lines) == 0:
         return 0, 0
-    
+
     return len(lines[0]), len(lines)
 
 
@@ -29,19 +26,10 @@ def get_coords_from_string(
             yield (x, y), c
 
 
-# Return the board specified by the given strings.
-def get_board_from_strings(
-    multiplier_string: str | None = None, tile_string: str | None = None
-) -> Board | None:
-    if multiplier_string is None and tile_string is None:
-        return None
-
-    # Figure out the dimensions.
-    if multiplier_string is not None:
-        width, height = get_dimensions_from_string(multiplier_string)
-    else:
-        width, height = get_dimensions_from_string(tile_string)
-
+# Return the position-to-tile mapping contained in the given string.
+def get_position_to_tile_from_string(
+    tile_string: str | None,
+) -> Mapping[BoardPosition, Tile]:
     # Get the layout of the tiles.
     position_to_tile = dict[BoardPosition, Tile]()
     for pos, c in get_coords_from_string(tile_string):
@@ -56,8 +44,13 @@ def get_board_from_strings(
         else:
             tile = BlankTile(letter=c.upper())  # type: ignore
         position_to_tile[pos] = tile
+    return position_to_tile
 
-    # Get the layout of the multipliers.
+
+# Return the position-to-multiplier mapping contained in the given string.
+def get_position_to_multiplier_from_string(
+    multiplier_string: str | None,
+) -> Mapping[BoardPosition, Multiplier]:
     position_to_multiplier = dict[BoardPosition, Multiplier]()
     for pos, c in get_coords_from_string(multiplier_string):
         if c.isnumeric():
@@ -67,6 +60,31 @@ def get_board_from_strings(
             mul = ord(c) - ord("A") + 2
             multiplier = TileMultiplier(multiplier=mul)
             position_to_multiplier[pos] = multiplier
+    return position_to_multiplier
+
+
+# Return the board specified by the given strings.
+def get_board_from_strings(
+    multiplier_string: str | None = None, tile_string: str | None = None
+) -> Board:
+    if multiplier_string is None and tile_string is None:
+        return Board(
+            width=0, height=0, position_to_tile=dict(), position_to_multiplier=dict()
+        )
+
+    # Figure out the dimensions.
+    if multiplier_string is not None:
+        width, height = get_dimensions_from_string(multiplier_string)
+    else:
+        width, height = get_dimensions_from_string(tile_string)
+
+    # Get the layout of the tiles.
+    position_to_tile = get_position_to_tile_from_string(tile_string=tile_string)
+
+    # Get the layout of the multipliers.
+    position_to_multiplier = get_position_to_multiplier_from_string(
+        multiplier_string=multiplier_string
+    )
 
     return Board(
         width=width,
@@ -74,3 +92,9 @@ def get_board_from_strings(
         position_to_tile=position_to_tile,
         position_to_multiplier=position_to_multiplier,
     )
+
+
+# Return the on-board word contained in the given string.
+def get_word_on_board_from_string(tile_string: str) -> WordOnBoard:
+    position_to_tile = get_position_to_tile_from_string(tile_string=tile_string)
+    return WordOnBoard(position_to_tile=position_to_tile)

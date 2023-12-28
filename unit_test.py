@@ -16,6 +16,12 @@ class UtilsTest(unittest.TestCase):
         )
         self.assertEqual(board, exp_board)
 
+        board = get_board_from_strings()
+        exp_board = Board(
+            width=0, height=0, position_to_tile=dict(), position_to_multiplier=dict()
+        )
+        self.assertEqual(board, exp_board)
+
     def test_get_board_from_strings_2(self):
         board = get_board_from_strings(tile_string="A")
         exp_board = Board(
@@ -209,104 +215,298 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(board, exp_board)
 
 
-# class StateTest(unittest.TestCase):
-#     def setUp(self):
-#         self.maxDiff = None
+class StateTest(unittest.TestCase):
+    def setUp(self):
+        self.maxDiff = None
 
-#     def test_get_words_1(self):
-#         board_state = BoardState(position_to_tile=dict())
-#         self.assertListEqual(list(), board_state.get_words())
+    def test_get_word_1(self):
+        word = WordOnBoard(
+            position_to_tile={
+                (1, 0): LetterTile("A"),
+                (0, 0): BlankTile("Z"),
+                (2, 0): LetterTile("G"),
+            }
+        )
+        self.assertEqual(word.get_word(), "ZAG")
 
-#     def test_get_words_2(self):
-#         x0_y0 = BoardPosition(x=0, y=0)
-#         x1_y0 = BoardPosition(x=1, y=0)
-#         position_to_tile = {
-#             x0_y0: LetterTilePlacing(
-#                 tile=LetterTile(letter="A", points=1), position=x0_y0
-#             ),
-#             x1_y0: LetterTilePlacing(
-#                 tile=LetterTile(letter="A", points=1), position=x1_y0
-#             ),
-#         }
-#         word = WordOnBoard(position_to_tile=position_to_tile)
-#         self.assertEqual(word.get_word(), "AA")
-#         board_state = BoardState(position_to_tile=position_to_tile)
-#         self.assertCountEqual([word], board_state.get_words())
+    def test_get_word_2(self):
+        word = WordOnBoard(
+            position_to_tile={
+                (0, 1): LetterTile("A"),
+                (0, 0): LetterTile("Z"),
+                (0, 2): BlankTile("G"),
+            }
+        )
+        self.assertEqual(word.get_word(), "ZAG")
 
-#     def test_get_words_3(self):
-#         x0_y1 = BoardPosition(x=0, y=1)
-#         x1_y1 = BoardPosition(x=1, y=1)
-#         x1_y0 = BoardPosition(x=1, y=0)
+    def test_get_tile_at_get_letter_at(self):
+        board = get_board_from_strings(tile_string="CaT \n AAr")
+        self.assertEqual(board.get_tile_at((0, 0)), LetterTile("C"))
+        self.assertEqual(board.get_tile_at((1, 0)), BlankTile("A"))
+        self.assertEqual(board.get_tile_at((2, 0)), LetterTile("T"))
+        self.assertEqual(board.get_tile_at((3, 0)), None)
+        self.assertEqual(board.get_tile_at((0, 1)), None)
+        self.assertEqual(board.get_tile_at((1, 1)), LetterTile("A"))
+        self.assertEqual(board.get_tile_at((2, 1)), LetterTile("A"))
+        self.assertEqual(board.get_tile_at((3, 1)), BlankTile("R"))
 
-#         a_1 = LetterTile(letter="A", points=1)
-#         a_2 = LetterTile(letter="A", points=1)
-#         b = LetterTile(letter="B", points=1)
+        self.assertEqual(board.get_letter_at((0, 0)), "C")
+        self.assertEqual(board.get_letter_at((1, 0)), "A")
+        self.assertEqual(board.get_letter_at((2, 0)), "T")
+        self.assertEqual(board.get_letter_at((3, 0)), None)
+        self.assertEqual(board.get_letter_at((0, 1)), None)
+        self.assertEqual(board.get_letter_at((1, 1)), "A")
+        self.assertEqual(board.get_letter_at((2, 1)), "A")
+        self.assertEqual(board.get_letter_at((3, 1)), "R")
 
-#         position_to_tile = {
-#             x0_y1: LetterTilePlacing(tile=a_1, position=x0_y1),
-#             x1_y1: LetterTilePlacing(tile=a_2, position=x1_y1),
-#             x1_y0: LetterTilePlacing(tile=b, position=x1_y0),
-#         }
-#         w1_position_to_tile = {
-#             x0_y1: LetterTilePlacing(tile=a_1, position=x0_y1),
-#             x1_y1: LetterTilePlacing(tile=a_2, position=x1_y1),
-#         }
-#         w2_position_to_tile = {
-#             x1_y0: LetterTilePlacing(tile=b, position=x1_y0),
-#             x1_y1: LetterTilePlacing(tile=a_2, position=x1_y1),
-#         }
-#         word_1 = WordOnBoard(position_to_tile=w1_position_to_tile)
-#         word_2 = WordOnBoard(position_to_tile=w2_position_to_tile)
-#         self.assertEqual(word_1.get_word(), "AA")
-#         self.assertEqual(word_2.get_word(), "BA")
-#         board_state = BoardState(position_to_tile=position_to_tile)
-#         self.assertCountEqual([word_1, word_2], board_state.get_words())
+    def test_get_multiplier_at(self):
+        board = get_board_from_strings(multiplier_string=" 2\nB ")
+        self.assertEqual(board.get_multiplier_at((0, 0)), None)
+        self.assertEqual(board.get_multiplier_at((1, 0)), WordMultiplier(2))
+        self.assertEqual(board.get_multiplier_at((0, 1)), TileMultiplier(3))
+        self.assertEqual(board.get_multiplier_at((1, 1)), None)
 
-#     def test_get_words_4(self):
-#         x0_y0 = BoardPosition(x=0, y=0)
-#         x1_y0 = BoardPosition(x=1, y=0)
-#         x0_y1 = BoardPosition(x=0, y=1)
-#         x1_y1 = BoardPosition(x=1, y=1)
-#         a1 = LetterTile(letter="A", points=1)
-#         a2 = LetterTile(letter="A", points=1)
-#         a3 = LetterTile(letter="A", points=1)
-#         a4 = LetterTile(letter="A", points=1)
-#         position_to_tile = {
-#             x0_y0: LetterTilePlacing(tile=a1, position=x0_y0),
-#             x1_y0: LetterTilePlacing(tile=a2, position=x1_y0),
-#             x0_y1: LetterTilePlacing(tile=a3, position=x0_y1),
-#             x1_y1: LetterTilePlacing(tile=a4, position=x1_y1),
-#         }
-#         w1_position_to_tile = {
-#             x0_y0: LetterTilePlacing(tile=a1, position=x0_y0),
-#             x1_y0: LetterTilePlacing(tile=a2, position=x1_y0),
-#         }
-#         w2_position_to_tile = {
-#             x0_y1: LetterTilePlacing(tile=a3, position=x0_y1),
-#             x1_y1: LetterTilePlacing(tile=a4, position=x1_y1),
-#         }
-#         w3_position_to_tile = {
-#             x0_y0: LetterTilePlacing(tile=a1, position=x0_y0),
-#             x0_y1: LetterTilePlacing(tile=a3, position=x0_y1),
-#         }
-#         w4_position_to_tile = {
-#             x1_y0: LetterTilePlacing(tile=a2, position=x1_y0),
-#             x1_y1: LetterTilePlacing(tile=a4, position=x1_y1),
-#         }
-#         word_1 = WordOnBoard(w1_position_to_tile)
-#         word_2 = WordOnBoard(w2_position_to_tile)
-#         word_3 = WordOnBoard(w3_position_to_tile)
-#         word_4 = WordOnBoard(w4_position_to_tile)
-#         words = [word_1, word_2, word_3, word_4]
-#         for w in words:
-#             self.assertEqual(w.get_word(), "AA")
-#         board_state = BoardState(position_to_tile)
-#         self.assertCountEqual(words, board_state.get_words())
+    def test_get_visible_to(self):
+        board = get_board_from_strings(tile_string="CAT \n AAR")
+        self.assertEqual(board.get_visible_to(Player(1)), board)
+
+    def test_get_words_1(self):
+        board = get_board_from_strings()
+        self.assertListEqual(list(), board.get_words())
+
+    def test_get_words_2(self):
+        board = get_board_from_strings(tile_string="DOG")
+        words = [get_word_on_board_from_string(tile_string="DOG")]
+        self.assertCountEqual(board.get_words(), words)
+
+    def test_get_words_3(self):
+        board = get_board_from_strings(tile_string="DOG\nI  \nN  ")
+        words = [
+            get_word_on_board_from_string(tile_string="DOG"),
+            get_word_on_board_from_string("D\nI\nN"),
+        ]
+        self.assertCountEqual(board.get_words(), words)
+
+    def test_get_words_4(self):
+        board = get_board_from_strings(
+            tile_string=(
+                "GROUND OVER\n"
+                "OE PE  B   \n"
+                " D     JO  \n"
+                " SINK  E   \n"
+                "    ABACA  \n"
+                "       T   \n"
+            )
+        )
+        words = [
+            get_word_on_board_from_string(tile_string=("GROUND     ")),
+            get_word_on_board_from_string(tile_string=("       OVER")),
+            get_word_on_board_from_string(tile_string=("           \n" "OE         ")),
+            get_word_on_board_from_string(tile_string=("           \n" "   PE      ")),
+            get_word_on_board_from_string(
+                tile_string=("           \n" "           \n" "       JO  ")
+            ),
+            get_word_on_board_from_string(
+                tile_string=(
+                    "           \n" "           \n" "           \n" " SINK      "
+                )
+            ),
+            get_word_on_board_from_string(
+                tile_string=(
+                    "           \n"
+                    "           \n"
+                    "           \n"
+                    "           \n"
+                    "    ABACA  "
+                )
+            ),
+            get_word_on_board_from_string(
+                tile_string=("G          \n" "O          \n")
+            ),
+            get_word_on_board_from_string(
+                tile_string=(
+                    " R         \n" " E         \n" " D         \n" " S         \n"
+                )
+            ),
+            get_word_on_board_from_string(
+                tile_string=("   U       \n" "   P       \n")
+            ),
+            get_word_on_board_from_string(
+                tile_string=("    N      \n" "    E      \n")
+            ),
+            get_word_on_board_from_string(
+                tile_string=(
+                    "           \n"
+                    "           \n"
+                    "           \n"
+                    "    K      \n"
+                    "    A      \n"
+                )
+            ),
+            get_word_on_board_from_string(
+                tile_string=(
+                    "       O   \n"
+                    "       B   \n"
+                    "       J   \n"
+                    "       E   \n"
+                    "       C   \n"
+                    "       T   \n"
+                )
+            ),
+        ]
+        self.assertCountEqual(board.get_words(), words)
 
 
-# class RulesTest(unittest.TestCase):
-#     def setUp(self):
-#         self.maxDiff = None
+class RulesTest(unittest.TestCase):
+    def setUp(self):
+        self.maxDiff = None
+
+        self.p0 = Player(0)
+        self.p1 = Player(1)
+
+        self.empty_config = ScrabbleConfig(
+            playable_words=tuple(),
+            min_tiles_for_turn_in=7,
+            max_tiles_in_hand=7,
+            min_tiles_for_bingo=7,
+            bingo_points=50,
+        )
+        self.empty_state = GameState(
+            config=self.empty_config,
+            current_player=self.p0,
+            player_order=(self.p0, self.p1),
+            player_to_state={
+                self.p0: PlayerState(player=self.p0, score=0, tiles=list()),
+                self.p1: PlayerState(player=self.p1, score=0, tiles=list()),
+            },
+            bag_state=Bag(tiles=list()),
+            board_state=get_board_from_strings(),
+        )
+
+    def test_get_next_player_index(self):
+        pairs = (
+            ((0, 2), 1),
+            ((1, 2), 0),
+            ((0, 3), 1),
+            ((1, 3), 2),
+            ((2, 3), 0),
+            ((0, 4), 1),
+            ((1, 4), 2),
+            ((2, 4), 3),
+            ((3, 4), 0),
+        )
+        for (index, num_players), exp_next_player in pairs:
+            next_player = get_next_player_index(index=index, num_players=num_players)
+            self.assertEqual(next_player, exp_next_player)
+
+    def test_advance_player(self):
+        state = self.empty_state.copy()
+        self.assertEqual(state.current_player, self.p0)
+        advance_player(state)
+        self.assertEqual(state.current_player, self.p1)
+        advance_player(state)
+        self.assertEqual(state.current_player, self.p0)
+
+    def test_pass_move_is_valid(self):
+        move = PassMove()
+        state = self.empty_state.copy()
+        self.assertTrue(move.is_valid(state))
+        state.game_finished = True
+        self.assertFalse(move.is_valid(state))
+
+    def test_pass_move_perform_1(self):
+        move = PassMove()
+        next_state = self.empty_state.copy()
+        move.perform(next_state)
+
+        exp_next_state = self.empty_state.copy()
+        exp_next_state.current_player = self.p1
+        self.assertEqual(next_state, exp_next_state)
+
+    def test_pass_move_perform_2(self):
+        move = PassMove()
+        state = self.empty_state.copy()
+
+        state.current_player = self.p1
+
+        next_state = state.copy()
+        move.perform(next_state)
+
+        exp_next_state = state.copy()
+        exp_next_state.current_player = self.p0
+        self.assertEqual(next_state, exp_next_state)
+
+    def test_exchange_tiles_move_is_valid_1(self):
+        state = self.empty_state.copy()
+
+        # Test checking if there are enough tiles in the bag for an exchange to be legal.
+        move = ExchangeTilesMove(tiles=list())
+        self.assertFalse(move.is_valid(state))
+
+        state.bag.tiles = [LetterTile("A")] * 7
+        self.assertTrue(move.is_valid(state))
+
+        # You can't do any move if the game is over.
+        state.game_finished = True
+        self.assertFalse(move.is_valid(state))
+
+        state = self.empty_state.copy()
+
+    def test_exchange_tiles_move_is_valid_2(self):
+        state = self.empty_state.copy()
+        state.bag.tiles = [LetterTile("A")] * 7
+        move_1 = ExchangeTilesMove(tiles=[LetterTile("A")])
+
+        # Test checking if the player has all of the tiles to be exchanged.
+        self.assertFalse(move_1.is_valid(state))
+        state.player_to_state[self.p0].tiles.append(LetterTile("A"))
+        self.assertTrue(move_1.is_valid(state))
+
+        state = self.empty_state.copy()
+        state.bag.tiles = [LetterTile("A")] * 7
+        move_2 = ExchangeTilesMove(tiles=[LetterTile("E"), BlankTile()])
+        self.assertFalse(move_2.is_valid(state))
+        state.player_to_state[self.p0].tiles.append(LetterTile("A"))
+        self.assertFalse(move_2.is_valid(state))
+        state.player_to_state[self.p0].tiles.append(LetterTile("E"))
+        self.assertFalse(move_2.is_valid(state))
+        state.player_to_state[self.p0].tiles.append(BlankTile())
+        self.assertTrue(move_2.is_valid(state))
+        state.player_to_state[self.p0].tiles.append(LetterTile("E"))
+        self.assertTrue(move_2.is_valid(state))
+
+    def test_exchange_tiles_move_perform_1(self):
+        state = self.empty_state.copy()
+
+        state.config.min_tiles_for_turn_in = 1
+        state.bag.tiles.append(LetterTile("A"))
+        state.player_to_state[self.p0].tiles.append(LetterTile("B"))
+        move = ExchangeTilesMove(tiles=[LetterTile("B")])
+        move.perform(state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.config.min_tiles_for_turn_in = 1
+        exp_state.bag.tiles.append(LetterTile("B"))
+        exp_state.player_to_state[self.p0].tiles.append(LetterTile("A"))
+        exp_state.current_player = self.p1
+
+        self.assertEqual(exp_state, state)
+
+    def test_exchange_tiles_move_perform_2(self):
+        state = self.empty_state.copy()
+        letters = "ABCDEFG"
+        state.bag.tiles = [LetterTile(l) for l in letters] # type: ignore
+
+        p0_state = state.player_to_state[self.p0]
+        p0_state.tiles.append(LetterTile("O"))
+        move = ExchangeTilesMove(tiles=[LetterTile("O")])
+        move.perform(state)
+
+        self.assertIn(LetterTile("O"), state.bag.tiles)
+        self.assertNotIn(LetterTile("O"), p0_state.tiles)
+        self.assertEqual(len(p0_state.tiles), 1)
+        self.assertIn(p0_state.tiles[0].letter, letters) # type: ignore
+
 
 #     def test_get_words_made_1(self):
 #         board_state = BoardState(position_to_tile=dict())
