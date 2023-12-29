@@ -1,4 +1,12 @@
-from typing import Self, Literal, Mapping, Collection, Sequence, Iterable
+from typing import (
+    Self,
+    Literal,
+    MutableMapping,
+    Mapping,
+    Collection,
+    Sequence,
+    Iterable,
+)
 import copy
 from dataclasses import dataclass
 from frozendict import frozendict
@@ -54,8 +62,18 @@ class LetterTile(Tile):
     letter: LETTER
     # points: int
 
+    def __init__(self, letter: LETTER, points: int = 0) -> None:
+        self.letter = letter
+        self.points = points
+
     def __hash__(self) -> int:
-        return hash(self.letter)
+        return hash(self.letter) & hash(self.points)
+
+    def __eq__(self, other) -> bool:
+        if type(other) is not type(self):
+            return False
+
+        return self.letter == other.letter and self.points == other.points
 
 
 # A tile with nothing on it.
@@ -64,8 +82,18 @@ class BlankTile(Tile):
     letter: LETTER | None = None
     # points: int
 
+    def __init__(self, letter: LETTER | None = None, points: int = 0) -> None:
+        self.letter = letter
+        self.points = points
+
     def __hash__(self) -> int:
-        return hash(self.letter)
+        return hash(self.letter) ^ hash(self.points)
+
+    def __eq__(self, other) -> bool:
+        if type(other) is not type(self):
+            return False
+
+        return self.letter == other.letter and self.points == other.points
 
 
 # # Any tile.
@@ -367,7 +395,7 @@ class Board:
     width: int
     height: int
     starting_position: BoardPosition | None
-    position_to_tile: Mapping[BoardPosition, Tile]
+    position_to_tile: MutableMapping[BoardPosition, Tile]
     position_to_multiplier: Mapping[BoardPosition, Multiplier]
 
     def __init__(

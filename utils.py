@@ -27,10 +27,31 @@ def get_coords_from_string(
             yield (x, y), c
 
 
+BLANK_TILE_NO_LETTER = "*"
+
+
+# Return the tile specified by the given character.
+def get_tile_from_char(c: str, letter_to_points: Mapping[str, int]) -> Tile:
+    # Check if it's supposed to be a blank tile with no letter.
+    if c == BLANK_TILE_NO_LETTER:
+        return BlankTile()
+
+    # An uppercase letter means a normal tile of that letter.
+    # A lowercase letter means a blank tile placed as that letter.
+    if c.isupper():
+        points = letter_to_points.get(c, 0)
+        return LetterTile(letter=c, points=points)  # type: ignore
+
+    return BlankTile(letter=c.upper())  # type: ignore
+
+
 # Return the position-to-tile mapping contained in the given string.
 def get_position_to_tile_from_string(
     tile_string: str | None,
+    letter_to_points: Mapping[str, int] | None = None,
 ) -> Mapping[BoardPosition, Tile]:
+    letter_to_points = dict() if letter_to_points is None else letter_to_points
+
     # Get the layout of the tiles.
     position_to_tile = dict[BoardPosition, Tile]()
     for pos, c in get_coords_from_string(tile_string):
@@ -38,12 +59,12 @@ def get_position_to_tile_from_string(
         if not c.isalpha():
             continue
 
-        # An uppercase letter means a normal tile of that letter.
-        # A lowercase letter means a blank tile placed as that letter.
-        if c.isupper():
-            tile = LetterTile(letter=c)  # type: ignore
-        else:
-            tile = BlankTile(letter=c.upper())  # type: ignore
+        # if c.isupper():
+        #     points = letter_to_points.get(c, 0)
+        #     tile = LetterTile(letter=c, points=points)  # type: ignore
+        # else:
+        #     tile = BlankTile(letter=c.upper())  # type: ignore
+        tile = get_tile_from_char(c=c, letter_to_points=letter_to_points)
         position_to_tile[pos] = tile
     return position_to_tile
 
@@ -66,12 +87,15 @@ def get_position_to_multiplier_from_string(
 
 # Return the board specified by the given strings.
 def get_board_from_strings(
-    multiplier_string: str | None = None, tile_string: str | None = None
+    multiplier_string: str | None = None,
+    tile_string: str | None = None,
+    letter_to_points: Mapping[str, int] | None = None,
 ) -> Board:
     if multiplier_string is None and tile_string is None:
         return Board(
             width=0, height=0, position_to_tile=dict(), position_to_multiplier=dict()
         )
+    letter_to_points = dict() if letter_to_points is None else letter_to_points
 
     # Figure out the dimensions.
     if multiplier_string is not None:
@@ -80,7 +104,9 @@ def get_board_from_strings(
         width, height = get_dimensions_from_string(tile_string)
 
     # Get the layout of the tiles.
-    position_to_tile = get_position_to_tile_from_string(tile_string=tile_string)
+    position_to_tile = get_position_to_tile_from_string(
+        tile_string=tile_string, letter_to_points=letter_to_points
+    )
 
     # Get the layout of the multipliers.
     position_to_multiplier = get_position_to_multiplier_from_string(
@@ -102,15 +128,34 @@ def get_word_on_board_from_string(tile_string: str) -> WordOnBoard:
 
 
 # Return the tile-placing move contained in the given string.
-def get_place_tiles_move_from_string(tile_string: str) -> PlaceTilesMove:
+def get_place_tiles_move_from_string(
+    tile_string: str, letter_to_points: Mapping[str, int] | None = None
+) -> PlaceTilesMove:
+    letter_to_points = dict() if letter_to_points is None else letter_to_points
+
     position_to_placing = dict[BoardPosition, TilePlacing]()
     position_to_tile = get_position_to_tile_from_string(tile_string=tile_string)
     for position, tile in position_to_tile.items():
         if isinstance(tile, LetterTile):
-            position_to_placing[position] = LetterTilePlacing(tile=tile)
+            points = letter_to_points.get(tile.letter, 0)
+            position_to_placing[position] = LetterTilePlacing(
+                tile=LetterTile(letter=tile.letter, points=points)
+            )
             continue
         if isinstance(tile, BlankTile):
             position_to_placing[position] = BlankTilePlacing(tile=BlankTile(), letter=tile.letter)  # type: ignore
             continue
     return PlaceTilesMove(position_to_placing=position_to_placing)
 
+
+# Return a list of the tiles specified by the given string.
+def get_tiles_from_string(
+    tile_string: str, letter_to_points: Mapping[str, int] | None = None
+) -> list[Tile]:
+    letter_to_points = dict() if letter_to_points is None else letter_to_points
+    result = list[Tile]()
+    for c in tile_string:
+        tile = get_tile_from_char(c=c, letter_to_points=letter_to_points)
+        result.append(tile)
+
+    return result

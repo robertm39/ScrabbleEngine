@@ -9,6 +9,31 @@ class UtilsTest(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
 
+    def test_get_tile_from_char_1(self):
+        pairs = (
+            ("A", LetterTile("A")),
+            ("R", LetterTile("R")),
+            ("f", BlankTile("F")),
+            ("x", BlankTile("X")),
+            ("*", BlankTile()),
+        )
+        for c, exp_tile in pairs:
+            tile = get_tile_from_char(c=c, letter_to_points=dict())
+            self.assertEqual(tile, exp_tile)
+
+    def test_get_tile_from_char_2(self):
+        letter_to_points = {"A": 1, "R": 2, "X": 10}
+        pairs = (
+            ("A", LetterTile("A", points=1)),
+            ("R", LetterTile("R", points=2)),
+            ("f", BlankTile("F", points=0)),
+            ("x", BlankTile("X", points=0)),
+            ("*", BlankTile()),
+        )
+        for c, exp_tile in pairs:
+            tile = get_tile_from_char(c=c, letter_to_points=letter_to_points)
+            self.assertEqual(tile, exp_tile)
+
     def test_get_board_from_strings_1(self):
         board = get_board_from_strings(tile_string="")
         exp_board = Board(
@@ -226,12 +251,12 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(move, exp_move)
 
     def test_get_place_tiles_move_from_string_2(self):
-        move = get_place_tiles_move_from_string("B\no\ng")
+        move = get_place_tiles_move_from_string("B\no\nb")
         exp_move = PlaceTilesMove(
             position_to_placing={
                 (0, 0): LetterTilePlacing(tile=LetterTile("B")),
                 (0, 1): BlankTilePlacing(tile=BlankTile(), letter="O"),
-                (0, 2): BlankTilePlacing(tile=BlankTile(), letter="G"),
+                (0, 2): BlankTilePlacing(tile=BlankTile(), letter="B"),
             }
         )
         self.assertEqual(move, exp_move)
@@ -250,6 +275,44 @@ class UtilsTest(unittest.TestCase):
             }
         )
         self.assertEqual(move, exp_move)
+
+    def test_get_place_tiles_move_from_string_4(self):
+        move = get_place_tiles_move_from_string(
+            "CAT", letter_to_points={"C": 3, "A": 1, "T": 2}
+        )
+        exp_move = PlaceTilesMove(
+            position_to_placing={
+                (0, 0): LetterTilePlacing(tile=LetterTile("C", points=3)),
+                (1, 0): LetterTilePlacing(tile=LetterTile("A", points=1)),
+                (2, 0): LetterTilePlacing(tile=LetterTile("T", points=2)),
+            }
+        )
+        self.assertEqual(move, exp_move)
+
+    def test_get_tiles_from_string_1(self):
+        pairs = (
+            ("", list()),
+            ("A", [LetterTile("A")]),
+            ("AGO", [LetterTile("A"), LetterTile("G"), LetterTile("O")]),
+            ("A*O", [LetterTile("A"), BlankTile(), LetterTile("O")]),
+        )
+        for tile_string, exp_tiles in pairs:
+            tiles = get_tiles_from_string(tile_string=tile_string)
+            self.assertCountEqual(tiles, exp_tiles)
+
+    def test_get_tiles_from_string_2(self):
+        letter_to_points = {"A": 1, "G": 2, "O": 3}
+        pairs = (
+            ("", list()),
+            ("A", [LetterTile("A", 1)]),
+            ("AGO", [LetterTile("A", 1), LetterTile("G", 2), LetterTile("O", 3)]),
+            ("A*O", [LetterTile("A", 1), BlankTile(), LetterTile("O", 3)]),
+        )
+        for tile_string, exp_tiles in pairs:
+            tiles = get_tiles_from_string(
+                tile_string=tile_string, letter_to_points=letter_to_points
+            )
+            self.assertCountEqual(tiles, exp_tiles)
 
 
 class StateTest(unittest.TestCase):
@@ -575,6 +638,41 @@ class RulesTest(unittest.TestCase):
             adjacent = get_adjacent_positions(positions=positions)
             self.assertCountEqual(adjacent, exp_adjacent)
 
+    def test_deduct_final_tile_points_1(self):
+        state = self.empty_state.copy()
+
+        state.player_to_state[self.p0].tiles = [LetterTile("A", points=1)]
+        state.player_to_state[self.p1].tiles = [LetterTile("Q", points=10)]
+        deduct_final_tile_points(state=state, add_to_current_player=False)
+
+        self.assertEqual(state.player_to_state[self.p0].score, -1)
+        self.assertEqual(state.player_to_state[self.p1].score, -10)
+
+    def test_deduct_final_tile_points_2(self):
+        state = self.empty_state.copy()
+
+        state.player_to_state[self.p0].tiles = [LetterTile("A", points=1)]
+        state.player_to_state[self.p1].tiles = [
+            LetterTile("Q", points=10),
+            LetterTile("C", points=3),
+        ]
+        deduct_final_tile_points(state=state, add_to_current_player=False)
+
+        self.assertEqual(state.player_to_state[self.p0].score, -1)
+        self.assertEqual(state.player_to_state[self.p1].score, -13)
+
+    def test_deduct_final_tile_points_3(self):
+        state = self.empty_state.copy()
+
+        state.player_to_state[self.p1].tiles = [
+            LetterTile("Q", points=10),
+            LetterTile("C", points=3),
+        ]
+        deduct_final_tile_points(state=state, add_to_current_player=True)
+
+        self.assertEqual(state.player_to_state[self.p0].score, 13)
+        self.assertEqual(state.player_to_state[self.p1].score, -13)
+
     def test_pass_move_is_valid(self):
         move = PassMove()
         state = self.empty_state.copy()
@@ -615,6 +713,24 @@ class RulesTest(unittest.TestCase):
         move.perform(state)
         self.assertTrue(state.game_finished)
 
+    def test_pass_move_perform_4(self):
+        state = self.empty_state.copy()
+
+        state.player_to_state[self.p0].tiles = [LetterTile("A", points=1)]
+        state.player_to_state[self.p1].tiles = [LetterTile("Q", points=10)]
+
+        move = PassMove()
+        for i in range(5):
+            move.perform(state)
+            self.assertEqual(state.num_scoreless_turns, i + 1)
+        self.assertFalse(state.game_finished)
+        move.perform(state)
+        self.assertEqual(state.num_scoreless_turns, 6)
+        self.assertTrue(state.game_finished)
+
+        self.assertEqual(state.player_to_state[self.p0].score, -1)
+        self.assertEqual(state.player_to_state[self.p1].score, -10)
+
     def test_exchange_tiles_move_is_valid_1(self):
         state = self.empty_state.copy()
 
@@ -622,7 +738,7 @@ class RulesTest(unittest.TestCase):
         move = ExchangeTilesMove(tiles=list())
         self.assertFalse(move.is_valid(state))
 
-        state.bag.tiles = [LetterTile("A")] * 7
+        state.bag.tiles = get_tiles_from_string("A" * 7)
         self.assertTrue(move.is_valid(state))
 
         # You can't do any move if the game is over.
@@ -633,7 +749,7 @@ class RulesTest(unittest.TestCase):
 
     def test_exchange_tiles_move_is_valid_2(self):
         state = self.empty_state.copy()
-        state.bag.tiles = [LetterTile("A")] * 7
+        state.bag.tiles = get_tiles_from_string("A" * 7)
         move_1 = ExchangeTilesMove(tiles=[LetterTile("A")])
 
         # Test checking if the player has all of the tiles to be exchanged.
@@ -642,7 +758,7 @@ class RulesTest(unittest.TestCase):
         self.assertTrue(move_1.is_valid(state))
 
         state = self.empty_state.copy()
-        state.bag.tiles = [LetterTile("A")] * 7
+        state.bag.tiles = get_tiles_from_string("A" * 7)
         move_2 = ExchangeTilesMove(tiles=[LetterTile("E"), BlankTile()])
         self.assertFalse(move_2.is_valid(state))
         state.player_to_state[self.p0].tiles.append(LetterTile("A"))
@@ -849,12 +965,7 @@ class RulesTest(unittest.TestCase):
         # Test checking if the game is over.
         state = self.empty_state.copy()
         state.board = get_board_from_strings(tile_string="    \n    \n    ")
-        state.player_to_state[self.p0].tiles = [
-            LetterTile("D"),
-            LetterTile("O"),
-            LetterTile("G"),
-            LetterTile("E"),
-        ]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string("DOGE")
         state.game_finished = True
         self.assertFalse(move_1.is_valid(state=state))
 
@@ -871,23 +982,13 @@ class RulesTest(unittest.TestCase):
         # Test checking if the word fits on the board.
         state = self.empty_state.copy()
         state.board = get_board_from_strings(tile_string="   \n   \n   ")
-        state.player_to_state[self.p0].tiles = [
-            LetterTile("D"),
-            LetterTile("O"),
-            LetterTile("G"),
-            LetterTile("E"),
-        ]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string("DOGE")
         self.assertFalse(move_1.is_valid(state=state))
 
         # Test checking if the move places a tile onto a tile already on the board.
         state = self.empty_state.copy()
         state.board = get_board_from_strings(tile_string="APPLE")
-        state.player_to_state[self.p0].tiles = [
-            LetterTile("W"),
-            LetterTile("I"),
-            LetterTile("T"),
-            LetterTile("H"),
-        ]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string("WITH")
         move_3 = get_place_tiles_move_from_string(tile_string="WITH")
         self.assertFalse(move_3.is_valid(state=state))
 
@@ -905,30 +1006,228 @@ class RulesTest(unittest.TestCase):
         state = self.empty_state.copy()
         state.board = get_board_from_strings(tile_string="       ")
         state.board.starting_position = (3, 0)
-        state.player_to_state[self.p0].tiles = [
-            LetterTile("D"),
-            LetterTile("O"),
-            LetterTile("G"),
-        ]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string("DOG")
         move_5 = get_place_tiles_move_from_string(tile_string="DOG")
         self.assertFalse(move_5.is_valid(state=state))
 
         # Test checking that, if any tiles are placed, at least one tile in the move is adjacent to a tile on the board.
         state = self.empty_state.copy()
         state.board = get_board_from_strings(tile_string="CAT\n   \n   ")
-        state.player_to_state[self.p0].tiles = [
-            LetterTile("D"),
-            LetterTile("O"),
-            LetterTile("G"),
-        ]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string("DOG")
         move_6 = get_place_tiles_move_from_string(tile_string="\n\nDOG")
         self.assertFalse(move_6.is_valid(state=state))
 
         # Test checking if the move makes at least one word.
         state = self.empty_state.copy()
         move_7 = get_place_tiles_move_from_string(tile_string="A")
-        state.player_to_state[self.p0].tiles = [LetterTile("A")]
+        state.player_to_state[self.p0].tiles = [LetterTile(letter="A")]
         self.assertFalse(move_7.is_valid(state=state))
+
+    def test_place_tiles_move_get_points_for_word(self):
+        pairs = (
+            ("   ", 6),
+            ("2  ", 12),
+            (" 2 ", 12),
+            ("  2", 12),
+            ("A  ", 7),
+            ("  B", 12),
+            ("2 B", 24),
+            (" 2B", 24),
+            (" 2A", 18),
+            ("33B", 108),
+        )
+        for multiplier_string, exp_points in pairs:
+            board = get_board_from_strings(
+                multiplier_string=multiplier_string, tile_string="   "
+            )
+            move = get_place_tiles_move_from_string(
+                tile_string="DOG", letter_to_points={"D": 1, "O": 2, "G": 3}
+            )
+            word = move.get_words_made(board=board)[0]
+            self.assertEqual(
+                move.get_points_for_word(board=board, word=word), exp_points
+            )
+
+    def test_place_tiles_move_perform_1(self):
+        # Test a normal case.
+        state = self.empty_state.copy()
+        letter_to_points = {"B": 1, "A": 1, "G": 1}
+        state.bag.tiles = [BlankTile()]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string(
+            "BAG", letter_to_points=letter_to_points
+        )
+        state.board = get_board_from_strings(tile_string="   ")
+
+        move = get_place_tiles_move_from_string(
+            "BAG", letter_to_points=letter_to_points
+        )
+
+        move.perform(state=state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.board = get_board_from_strings(
+            tile_string="BAG", letter_to_points=letter_to_points
+        )
+        exp_state.player_to_state[self.p0].score = 3
+        exp_state.player_to_state[self.p0].tiles = [BlankTile()]
+        exp_state.current_player = self.p1
+
+        self.assertEqual(state, exp_state)
+
+    def test_place_tiles_move_perform_2(self):
+        # Test a case with a 50-point bonus.
+        state = self.empty_state.copy()
+        letter_to_points = {c: 1 for c in "OSTRICH"}
+        state.bag.tiles = [BlankTile()]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string(
+            "OSTRICH", letter_to_points=letter_to_points
+        )
+        state.board = get_board_from_strings(tile_string="       ")
+
+        move = get_place_tiles_move_from_string(
+            "OSTRICH", letter_to_points=letter_to_points
+        )
+
+        move.perform(state=state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.board = get_board_from_strings(
+            tile_string="OSTRICH", letter_to_points=letter_to_points
+        )
+        exp_state.player_to_state[self.p0].score = 57
+        exp_state.player_to_state[self.p0].tiles = [BlankTile()]
+        exp_state.current_player = self.p1
+
+        self.assertEqual(state, exp_state)
+
+    def test_place_tiles_move_perform_3(self):
+        # Test that the number of scoreless turns is reset to zero.
+        state = self.empty_state.copy()
+        state.num_scoreless_turns = 5
+        letter_to_points = {"B": 1, "A": 1, "G": 1}
+        state.bag.tiles = [BlankTile()]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string(
+            "BAG", letter_to_points=letter_to_points
+        )
+        state.board = get_board_from_strings(tile_string="   ")
+
+        move = get_place_tiles_move_from_string(
+            "BAG", letter_to_points=letter_to_points
+        )
+
+        move.perform(state=state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.board = get_board_from_strings(
+            tile_string="BAG", letter_to_points=letter_to_points
+        )
+        exp_state.player_to_state[self.p0].score = 3
+        exp_state.player_to_state[self.p0].tiles = [BlankTile()]
+        exp_state.current_player = self.p1
+
+        self.assertEqual(state, exp_state)
+
+    def test_place_tiles_move_perform_4(self):
+        # Test that the number of scoreless turns is incremented if no points are scored.
+        state = self.empty_state.copy()
+        state.num_scoreless_turns = 0
+        letter_to_points = dict()
+        state.bag.tiles = [BlankTile()]
+        state.player_to_state[self.p0].tiles = [BlankTile()]
+        state.board = get_board_from_strings(tile_string="a ")
+
+        move = get_place_tiles_move_from_string(" t", letter_to_points=letter_to_points)
+
+        move.perform(state=state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.num_scoreless_turns = 1
+        exp_state.board = get_board_from_strings(
+            tile_string="at", letter_to_points=letter_to_points
+        )
+        exp_state.player_to_state[self.p0].tiles = [BlankTile()]
+        exp_state.current_player = self.p1
+
+        self.assertEqual(state, exp_state)
+
+    def test_place_tiles_move_perform_5(self):
+        # Test that the number of scoreless turns is not incremented when the word placed
+        # scores no points, but the player does get a 50-point bonus.
+        state = self.empty_state.copy()
+        state.num_scoreless_turns = 5
+        letter_to_points = dict()
+        state.bag.tiles = [BlankTile()]
+        state.player_to_state[self.p0].tiles = [BlankTile()] * 7
+        state.board = get_board_from_strings(tile_string="       ")
+
+        move = get_place_tiles_move_from_string(
+            "ostrich", letter_to_points=letter_to_points
+        )
+
+        move.perform(state=state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.board = get_board_from_strings(
+            tile_string="ostrich", letter_to_points=letter_to_points
+        )
+        exp_state.num_scoreless_turns = 0
+        exp_state.player_to_state[self.p0].score = 50
+        exp_state.player_to_state[self.p0].tiles = [BlankTile()]
+        exp_state.current_player = self.p1
+
+        self.assertEqual(state, exp_state)
+
+    def test_place_tiles_move_perform_6(self):
+        # Test that the game ends and play doesn't advance to the next player
+        # if this is the sixth scoreless turn in a row.
+        state = self.empty_state.copy()
+        state.num_scoreless_turns = 5
+        letter_to_points = dict()
+        state.bag.tiles = [BlankTile()]
+        state.player_to_state[self.p0].tiles = [BlankTile()]
+        state.board = get_board_from_strings(tile_string="a ")
+
+        move = get_place_tiles_move_from_string(" t", letter_to_points=letter_to_points)
+
+        move.perform(state=state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.board = get_board_from_strings(
+            tile_string="at", letter_to_points=letter_to_points
+        )
+        exp_state.num_scoreless_turns = 6
+        exp_state.player_to_state[self.p0].tiles = [BlankTile()]
+        exp_state.game_finished = True
+
+        self.assertEqual(state, exp_state)
+
+    def test_place_tiles_move_perform_7(self):
+        # Test a normal case.
+        state = self.empty_state.copy()
+        letter_to_points = {"A": 1, "E": 1, "D": 1, "I": 1, "L": 1, "N": 1, "X": 10}
+        state.bag.tiles = [BlankTile()]
+        state.player_to_state[self.p0].tiles = get_tiles_from_string(
+            "AEDILE", letter_to_points=letter_to_points
+        )
+        state.board = get_board_from_strings(
+            tile_string="INDEX  \n       ", letter_to_points=letter_to_points
+        )
+
+        move = get_place_tiles_move_from_string(
+            "\n AEDILE", letter_to_points=letter_to_points
+        )
+
+        move.perform(state=state)
+
+        exp_state = self.empty_state.copy()
+        exp_state.board = get_board_from_strings(
+            tile_string="INDEX  \n AEDILE", letter_to_points=letter_to_points
+        )
+        exp_state.player_to_state[self.p0].score = 23
+        exp_state.player_to_state[self.p0].tiles = [BlankTile()]
+        exp_state.current_player = self.p1
+
+        self.assertEqual(state, exp_state)
 
 
 if __name__ == "__main__":  #

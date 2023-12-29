@@ -35,6 +35,29 @@ class Move(ABC):
         ...
 
 
+# For each player, deduct the points of the tiles he still has in his rack from his score.
+# If requested, also add the points of all other player's tiles to the current player's score.
+def deduct_final_tile_points(state: GameState, add_to_current_player: bool) -> None:
+    # Get the tile points for each other player.
+    total_other_player_tile_points = 0
+    for other_player, other_player_state in state.player_to_state.items():
+        if add_to_current_player and (other_player == state.current_player):
+            continue
+        other_player_tile_points = 0
+        for tile in other_player_state.tiles:
+            other_player_tile_points += tile.points
+
+        # Subtract these points from the score of this player.
+        other_player_state.score -= other_player_tile_points
+        total_other_player_tile_points += other_player_tile_points
+
+    # If requested, add the points of the tiles in all other player's racks to the current player's score.
+    if add_to_current_player:
+        state.player_to_state[
+            state.current_player
+        ].score += total_other_player_tile_points
+
+
 # A move where a single word is placed.
 @dataclass
 class PlaceTilesMove(Move):
@@ -197,101 +220,96 @@ class PlaceTilesMove(Move):
 
         return True
 
+    # Return the number of points scored in a particular word in this move.
+    def get_points_for_word(self, board: Board, word: WordOnBoard) -> int:
+        # Determine the sum of the points of the tiles, taking tile multipliers into account.
+        word_multiplier = 1
+        word_points = 0
+        for position, tile in word.position_to_tile.items():
+            # Get the base score of the tile.
+            tile_points = tile.points  # type: ignore
+
+            # If this is our tile, apply the tile-multiplier, if any.
+            if (
+                position in self.position_to_placing
+                and board.get_multiplier_at(position) is not None
+            ):
+                # multiplier = state.config.board_config.position_to_multiplier[
+                #     tile.position
+                # ]
+                multiplier = board.get_multiplier_at(position)
+                if isinstance(multiplier, TileMultiplier):
+                    tile_points *= multiplier.multiplier
+                elif isinstance(multiplier, WordMultiplier):
+                    word_multiplier *= multiplier.multiplier
+
+            word_points += tile_points
+        word_points *= word_multiplier
+        return word_points
+
     def perform(self, state: GameState) -> None:
-        ...  # TODO implement.
+        # Get all of the new words.
+        new_words = self.get_words_made(board=state.board)
 
-    # # Return the number of points scored in a particular word in this move.
-    # def get_points_for_word(self, state: GameState, word: WordOnBoard) -> int:
-    #     player_tiles = state.player_to_state[state.current_player].tiles
+        # Determine the number of points scored with words.
+        word_points = 0
+        for word in new_words:
+            word_points += self.get_points_for_word(board=state.board, word=word)
+        turn_points = word_points
 
-    #     # Determine the sum of the points of the tiles, taking tile multipliers into account.
-    #     word_multiplier = 1
-    #     word_points = 0
-    #     for placing in word.position_to_tile.values():
-    #         # Get the base score of the tile.
-    #         tile_points = placing.tile.points
+        # Determine whether there was a bingo, and add the points if there was.
+        if len(self.position_to_placing) >= state.config.min_tiles_for_bingo:
+            turn_points += state.config.bingo_points
 
-    #         # If this is our tile, apply the tile-multiplier, if any.
-    #         if (
-    #             placing.tile in player_tiles
-    #             and placing.position in state.config.board_config.position_to_multiplier
-    #         ):
-    #             multiplier = state.config.board_config.position_to_multiplier[
-    #                 placing.position
-    #             ]
-    #             if isinstance(multiplier, TileMultiplier):
-    #                 tile_points *= multiplier.multiplier
-    #             elif isinstance(multiplier, WordMultiplier):
-    #                 word_multiplier *= multiplier.multiplier
+        # Add the points to the player's score.
+        player_state = state.player_to_state[state.current_player]
+        player_state.score += turn_points
 
-    #         word_points += tile_points
-    #     word_points *= word_multiplier
-    #     return word_points
+        # Update the number of consecutive scoreless turns.
+        # TODO does this actually count as a scoreless turn?
+        # (It is possible, if you place one blank tile, making a single word made with two blank tiles.)
+        if turn_points > 0:
+            state.num_scoreless_turns = 0
+        else:
+            state.num_scoreless_turns += 1
 
-    # def get_next_state(self, state: GameState) -> GameState:
-    #     # Get all of the new words.
-    #     new_words = self.get_words_made(board_state=state.board_state)
+        # If enough scoreless turns have passed, end the game.
+        end_game_for_scoreless_turns(state)
 
-    #     # Determine the number of points scored with words.
-    #     word_points = 0
-    #     for word in new_words:
-    #         word_points += self.get_points_for_word(state=state, word=word)
+        # Remove the played tiles from the player's rack.
+        for placing in self.position_to_placing.values():
+            player_state.tiles.remove(placing.tile)
 
-    #     turn_points = word_points
-    #     # Determine whether there was a bingo, and add the points if there was.
-    #     if len(self.tile_placings) >= state.config.min_tiles_for_bingo:
-    #         turn_points += state.config.bingo_points
+        # Place the tiles on the board.
+        for position, placing in self.position_to_placing.items():
+            tile = placing.tile
+            if isinstance(placing, BlankTilePlacing):
+                tile = BlankTile(letter=placing.letter, points=placing.tile.points)
+            state.board.position_to_tile[position] = tile
 
-    #     # Determine the new total score of the player.
-    #     player_state = state.player_to_state[state.current_player]
-    #     new_score = player_state.score + turn_points
+        # If there are no tiles to draw, and the player has no tiles left,
+        # give the bonuses and penalties for unplayed tiles and end the game.
+        # Otherwise, draw new tiles.
+        if len(state.bag.tiles) == 0 and len(player_state.tiles) == 0:
+            state.game_finished = True
+            deduct_final_tile_points(state=state, add_to_current_player=True)
+        else:
+            # Draw new tiles.
+            num_tiles_to_draw = min(len(state.bag.tiles), len(self.position_to_placing))
+            shuffle(state.bag.tiles)
+            drawn_tiles, remaining_tiles = (
+                state.bag.tiles[:num_tiles_to_draw],
+                state.bag.tiles[num_tiles_to_draw:],
+            )
+            player_state.tiles.extend(drawn_tiles)
+            state.bag.tiles = remaining_tiles
 
-    #     # Remove the played tiles from the player's rack.
-    #     new_player_tiles = list[Tile]()
-    #     played_tiles = [placing.tile for placing in self.tile_placings]
-    #     for tile in player_state.tiles:
-    #         if not tile in played_tiles:
-    #             new_player_tiles.append(tile)  # type: ignore
+        # If the game is finished, don't advance to the next player.
+        if state.game_finished:
+            return
 
-    #     # Place the tiles on the board.
-    #     new_position_to_tile = dict(state.board_state.position_to_tile)
-    #     for placing in self.tile_placings:
-    #         new_position_to_tile[placing.position] = placing
-    #     new_board_state = BoardState(position_to_tile=new_position_to_tile)
-
-    #     # Draw new tiles.
-    #     num_tiles_to_draw = min(len(played_tiles), len(state.bag_state.tiles))
-    #     bag_tiles = list(state.bag_state.tiles)
-    #     shuffle(bag_tiles)
-    #     drawn_tiles, remaining_tiles = (
-    #         bag_tiles[:num_tiles_to_draw],
-    #         bag_tiles[num_tiles_to_draw:],
-    #     )
-    #     new_player_tiles.extend(drawn_tiles)  # type: ignore
-    #     new_player_state = PlayerState(
-    #         player=state.current_player, score=new_score, tiles=new_player_tiles
-    #     )
-    #     new_player_to_state = dict(state.player_to_state)
-    #     new_player_to_state[state.current_player] = new_player_state
-
-    #     new_bag_state = TileBagState(tiles=remaining_tiles)  # type: ignore
-
-    #     # If there were already no tiles to draw, and the player has no tiles left,
-    #     # give the bonuses and penalties for unplayed tiles and end the game.
-
-    #     # Advance to the next player.
-    #     player_index = state.player_order.index(state.current_player)
-    #     next_index = get_next_player_index(player_index, len(state.player_order))
-    #     next_player = state.player_order[next_index]
-
-    #     return GameState(
-    #         config=state.config,
-    #         current_player=next_player,
-    #         player_order=state.player_order,
-    #         player_to_state=new_player_to_state,
-    #         bag_state=new_bag_state,
-    #         board_state=new_board_state,
-    #     )
+        # Advance to the next player.
+        advance_player(state)
 
 
 # Return the mapping from a tile to the number of times it occurs in the given list. TODO generify(?).
@@ -373,6 +391,10 @@ class ExchangeTilesMove(Move):
         state.bag.tiles = remaining_tiles + self.tiles
         shuffle(state.bag.tiles)
 
+        # If the game is finished, don't advance to the next player.
+        if state.game_finished:
+            return
+
         # Finally, advance to the next player.
         advance_player(state)
 
@@ -398,6 +420,7 @@ def advance_player(state: GameState) -> None:
 def end_game_for_scoreless_turns(state: GameState) -> None:
     if state.num_scoreless_turns >= state.config.scoreless_turns_to_end_game:
         state.game_finished = True
+        deduct_final_tile_points(state=state, add_to_current_player=False)
 
 
 # A move where the player passes.
@@ -408,6 +431,10 @@ class PassMove(Move):
     def perform(self, state: GameState) -> None:
         state.num_scoreless_turns += 1
         end_game_for_scoreless_turns(state)
+
+        # If the game is finished, don't advance to the next player.
+        if state.game_finished:
+            return
         advance_player(state)
 
 
