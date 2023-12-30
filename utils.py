@@ -1,8 +1,94 @@
 from typing import Generator
+from random import shuffle
 
 from game_state import *
 from rules import *
+import get_words
 
+# The string containing the multipliers for Scrabble.
+SCRABBLE_MULTIPLIER_STRING = (
+    "3  A   3   A  3\n"
+    " 2   B   B   2 \n"
+    "  2   A A   2  \n"
+    "A  2   A   2  A\n"
+    "    2     2    \n"
+    " B   B   B   B \n"
+    "  A   A A   A  \n"
+    "3  A   2   A  3\n"
+    "  A   A A   A  \n"
+    " B   B   B   B \n"
+    "    2     2    \n"
+    "A  2   A   2  A\n"
+    "  2   A A   2  \n"
+    " 2   B   B   2 \n"
+    "3  A   3   A  3"
+)
+
+# The mapping from letter to points in Scrabble.
+SCRABBLE_LETTER_TO_POINTS = {
+    "A": 1,
+    "E": 1,
+    "I": 1,
+    "O": 1,
+    "N": 1,
+    "R": 1,
+    "T": 1,
+    "L": 1,
+    "S": 1,
+    "U": 1,
+    "D": 2,
+    "G": 2,
+    "B": 3,
+    "C": 3,
+    "M": 3,
+    "P": 3,
+    "F": 4,
+    "H": 4,
+    "V": 4,
+    "W": 4,
+    "Y": 4,
+    "K": 5,
+    "J": 8,
+    "X": 8,
+    "Q": 10,
+    "Z": 10,
+}
+
+# The tiles in a Scrabble game.
+SCRABBLE_INITIAL_TILES_STR = (
+    "E" * 12
+    + "AI" * 9
+    + "O" * 8
+    + "NRT" * 6
+    + "LSUD" * 4
+    + "G" * 3
+    + "BCMPFHVWY" * 2
+    + "KJXQZ"
+    + "**"
+)
+
+
+# Returns a list containing the tiles in a Scrabble game.
+def get_scrabble_tiles() -> list[Tile]:
+    tiles = get_tiles_from_string(
+        tile_string=SCRABBLE_INITIAL_TILES_STR,
+        letter_to_points=SCRABBLE_LETTER_TO_POINTS,
+    )
+    shuffle(tiles)
+    return tiles
+
+SCRABBLE_RACK_SIZE = 7
+
+# Return the game-config for Scrabble.
+def get_scrabble_config() -> GameConfig:
+    return GameConfig(
+        playable_words=get_words.get_all_words(),
+        min_tiles_for_turn_in=SCRABBLE_RACK_SIZE,
+        max_tiles_in_hand=SCRABBLE_RACK_SIZE,
+        min_tiles_for_bonus=SCRABBLE_RACK_SIZE,
+        bonus_points=50,
+        scoreless_turns_to_end_game=6
+    )
 
 # Return the dimensions of the board contained withing the given string.
 def get_dimensions_from_string(s) -> tuple[int, int]:

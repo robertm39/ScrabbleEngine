@@ -540,12 +540,12 @@ class RulesTest(unittest.TestCase):
         self.p0 = Player(0)
         self.p1 = Player(1)
 
-        self.empty_config = ScrabbleConfig(
+        self.empty_config = GameConfig(
             playable_words=tuple(),
             min_tiles_for_turn_in=7,
             max_tiles_in_hand=7,
-            min_tiles_for_bingo=7,
-            bingo_points=50,
+            min_tiles_for_bonus=7,
+            bonus_points=50,
             scoreless_turns_to_end_game=6,
         )
         self.empty_state = GameState(
@@ -556,8 +556,8 @@ class RulesTest(unittest.TestCase):
                 self.p0: PlayerState(player=self.p0, score=0, tiles=list()),
                 self.p1: PlayerState(player=self.p1, score=0, tiles=list()),
             },
-            bag_state=Bag(tiles=list()),
-            board_state=get_board_from_strings(),
+            bag=Bag(tiles=list()),
+            board=get_board_from_strings(),
         )
 
     def test_end_game_for_scoreless_turns(self):
@@ -672,6 +672,24 @@ class RulesTest(unittest.TestCase):
 
         self.assertEqual(state.player_to_state[self.p0].score, 13)
         self.assertEqual(state.player_to_state[self.p1].score, -13)
+
+    def test_draw_tiles_1(self):
+        state = self.empty_state.copy()
+        state.bag.tiles = get_tiles_from_string("A")
+        draw_tiles(state.player_to_state[self.p0], state.bag, 1)
+
+        exp_state = self.empty_state.copy()
+        exp_state.player_to_state[self.p0].tiles = get_tiles_from_string("A")
+        self.assertEqual(state, exp_state)
+
+    def test_draw_tiles_2(self):
+        state = self.empty_state.copy()
+        state.bag.tiles = get_tiles_from_string("A")
+        draw_tiles(state.player_to_state[self.p0], state.bag, 2)
+
+        exp_state = self.empty_state.copy()
+        exp_state.player_to_state[self.p0].tiles = get_tiles_from_string("A")
+        self.assertEqual(state, exp_state)
 
     def test_pass_move_is_valid(self):
         move = PassMove()

@@ -192,7 +192,7 @@ Multiplier = WordMultiplier | TileMultiplier
 
 
 @dataclass
-class ScrabbleConfig:
+class GameConfig:
     playable_words: Collection[WORD]
     min_tiles_for_turn_in: int
     max_tiles_in_hand: int
@@ -205,15 +205,15 @@ class ScrabbleConfig:
         playable_words: Iterable[WORD],
         min_tiles_for_turn_in: int,
         max_tiles_in_hand: int,
-        min_tiles_for_bingo: int,
-        bingo_points: int,
+        min_tiles_for_bonus: int,
+        bonus_points: int,
         scoreless_turns_to_end_game: int,
     ):
         self.playable_words = frozenset(playable_words)
         self.min_tiles_for_turn_in = min_tiles_for_turn_in
         self.max_tiles_in_hand = max_tiles_in_hand
-        self.min_tiles_for_bingo = min_tiles_for_bingo
-        self.bingo_points = bingo_points
+        self.min_tiles_for_bingo = min_tiles_for_bonus
+        self.bingo_points = bonus_points
         self.scoreless_turns_to_end_game = scoreless_turns_to_end_game
 
 
@@ -506,7 +506,7 @@ class Board:
 # The state of the entire game.
 @dataclass
 class GameState:
-    config: ScrabbleConfig
+    config: GameConfig
     current_player: Player
     player_order: Sequence[Player]
     player_to_state: Mapping[Player, PlayerState]
@@ -517,20 +517,20 @@ class GameState:
 
     def __init__(
         self,
-        config: ScrabbleConfig,
+        config: GameConfig,
         current_player: Player,
         player_order: Iterable[Player],
         player_to_state: Mapping[Player, PlayerState],
-        bag_state: Bag,
-        board_state: Board,
+        bag: Bag,
+        board: Board,
         game_finished: bool = False,
     ):
         self.config = config
         self.current_player = current_player
         self.player_to_state = dict(player_to_state)
         self.player_order = tuple(player_order)
-        self.bag = bag_state
-        self.board = board_state
+        self.bag = bag
+        self.board = board
         self.game_finished = game_finished
 
     # Return a deep copy of this GameState.
@@ -542,7 +542,7 @@ class GameState:
 
 @dataclass
 class VisibleGameState:
-    config: ScrabbleConfig
+    config: GameConfig
     current_player: Player
     player_order: Sequence[Player]
     player_to_state: Mapping[Player, PlayerState | VisiblePlayerState]

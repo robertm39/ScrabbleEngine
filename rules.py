@@ -58,6 +58,16 @@ def deduct_final_tile_points(state: GameState, add_to_current_player: bool) -> N
         ].score += total_other_player_tile_points
 
 
+# Have the given player draw the given number of tiles.
+def draw_tiles(player: PlayerState, bag: Bag, num_tiles: int) -> None:
+    shuffle(bag.tiles)
+    num_tiles = min(num_tiles, len(bag.tiles))
+    drawn_tiles, remaining_tiles = bag.tiles[:num_tiles], bag.tiles[num_tiles:]
+    player.tiles.extend(drawn_tiles)
+    bag.tiles = remaining_tiles
+    shuffle(bag.tiles)
+
+
 # A move where a single word is placed.
 @dataclass
 class PlaceTilesMove(Move):
@@ -295,14 +305,19 @@ class PlaceTilesMove(Move):
             deduct_final_tile_points(state=state, add_to_current_player=True)
         else:
             # Draw new tiles.
-            num_tiles_to_draw = min(len(state.bag.tiles), len(self.position_to_placing))
-            shuffle(state.bag.tiles)
-            drawn_tiles, remaining_tiles = (
-                state.bag.tiles[:num_tiles_to_draw],
-                state.bag.tiles[num_tiles_to_draw:],
+            draw_tiles(
+                player=player_state,
+                bag=state.bag,
+                num_tiles=len(self.position_to_placing),
             )
-            player_state.tiles.extend(drawn_tiles)
-            state.bag.tiles = remaining_tiles
+            # num_tiles_to_draw = min(len(state.bag.tiles), len(self.position_to_placing))
+            # shuffle(state.bag.tiles)
+            # drawn_tiles, remaining_tiles = (
+            #     state.bag.tiles[:num_tiles_to_draw],
+            #     state.bag.tiles[num_tiles_to_draw:],
+            # )
+            # player_state.tiles.extend(drawn_tiles)
+            # state.bag.tiles = remaining_tiles
 
         # If the game is finished, don't advance to the next player.
         if state.game_finished:
@@ -379,16 +394,18 @@ class ExchangeTilesMove(Move):
                 pass
 
         # Give the player the same number of tiles (or as many as possible) from the bag.
-        tiles_to_draw = min(len(self.tiles), len(state.bag.tiles))
-        shuffle(state.bag.tiles)
-        drawn_tiles, remaining_tiles = (
-            state.bag.tiles[:tiles_to_draw],
-            state.bag.tiles[tiles_to_draw:],
-        )
-        player_state.tiles.extend(drawn_tiles)
+        draw_tiles(player=player_state, bag=state.bag, num_tiles=len(self.tiles))
+        # tiles_to_draw = min(len(self.tiles), len(state.bag.tiles))
+        # shuffle(state.bag.tiles)
+        # drawn_tiles, remaining_tiles = (
+        #     state.bag.tiles[:tiles_to_draw],
+        #     state.bag.tiles[tiles_to_draw:],
+        # )
+        # player_state.tiles.extend(drawn_tiles)
 
+        # state.bag.tiles = remaining_tiles + self.tiles
         # Put the player's tiles into the bag and shuffle it.
-        state.bag.tiles = remaining_tiles + self.tiles
+        state.bag.tiles.extend(self.tiles)
         shuffle(state.bag.tiles)
 
         # If the game is finished, don't advance to the next player.
@@ -441,7 +458,7 @@ class PassMove(Move):
 # A move-getter. Either an AI or a human player.
 class MoveGetter(ABC):
     @abstractmethod
-    def get_move(self, state: GameState) -> PlaceTilesMove:
+    def get_move(self, state: GameState) -> Move:
         ...
 
     def notify_new_state(self, state: GameState) -> None:
