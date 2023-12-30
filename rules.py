@@ -11,6 +11,10 @@ from game_state import BoardPosition, GameState
 class LetterTilePlacing:
     tile: LetterTile
 
+    @property
+    def letter(self) -> LETTER:
+        return self.tile.letter
+
 
 @dataclass
 class BlankTilePlacing:
@@ -170,29 +174,7 @@ class PlaceTilesMove(Move):
         if len(self.position_to_placing) == 0:
             return False
 
-        player_state = state.player_to_state[state.current_player]
-
-        # Check if the player has all of the tiles to be played.
-        move_tiles = [placing.tile for placing in self.position_to_placing.values()]
-        if not all_tiles_available(
-            available_tiles=player_state.tiles, requested_tiles=move_tiles
-        ):
-            return False
-
-        # If the move places a tile outside the board, it isn't valid.
-        for position in self.position_to_placing:
-            if not state.board.contains_position(position):
-                return False
-
-        # If the move places a tile onto a tile already on the board, it isn't valid.
-        for position in self.position_to_placing:
-            if state.board.get_tile_at(position) is not None:
-                return False
-
-        # The move must be in a line, either from left to right or from top to bottom.
-        if not self._is_any_linear_placement(board=state.board):
-            return False
-
+        # Reordering this to make move generation faster. (bad idea?)
         # At least one tile in the move must be adjacent to a tile already on the board,
         # unless there are no tiles already on the board, in which case the move
         # must place at least one tile on the designated starting position.
@@ -217,12 +199,67 @@ class PlaceTilesMove(Move):
             if not one_adj_to_board:
                 return False
 
+        # Reordering this as well. (bad idea?)
         # All words made by this placement must be in the dictionary.
         new_words = self.get_words_made(board=state.board)
         new_word_vals = [w.get_word() for w in new_words]
         for word in new_word_vals:
             if not word in state.config.playable_words:
                 return False
+
+        player_state = state.player_to_state[state.current_player]
+
+        # Check if the player has all of the tiles to be played.
+        move_tiles = [placing.tile for placing in self.position_to_placing.values()]
+        if not all_tiles_available(
+            available_tiles=player_state.tiles, requested_tiles=move_tiles
+        ):
+            return False
+
+        # If the move places a tile outside the board, it isn't valid.
+        for position in self.position_to_placing:
+            if not state.board.contains_position(position):
+                return False
+
+        # If the move places a tile onto a tile already on the board, it isn't valid.
+        for position in self.position_to_placing:
+            if state.board.get_tile_at(position) is not None:
+                return False
+
+        # The move must be in a line, either from left to right or from top to bottom.
+        if not self._is_any_linear_placement(board=state.board):
+            return False
+
+        # # At least one tile in the move must be adjacent to a tile already on the board,
+        # # unless there are no tiles already on the board, in which case the move
+        # # must place at least one tile on the designated starting position.
+        # if len(state.board.position_to_tile) == 0:
+        #     if state.board.starting_position is not None:
+        #         on_starting_position = False
+        #         for position in self.position_to_placing:
+        #             if position == state.board.starting_position:
+        #                 on_starting_position = True
+        #                 break
+        #         if not on_starting_position:
+        #             return False
+        # else:
+        #     adj_to_board = get_adjacent_positions(
+        #         positions=state.board.position_to_tile
+        #     )
+        #     one_adj_to_board = False
+        #     for position in self.position_to_placing:
+        #         if position in adj_to_board:
+        #             one_adj_to_board = True
+        #             break
+        #     if not one_adj_to_board:
+        #         return False
+
+        # # All words made by this placement must be in the dictionary.
+        # new_words = self.get_words_made(board=state.board)
+        # new_word_vals = [w.get_word() for w in new_words]
+        # for word in new_word_vals:
+        #     if not word in state.config.playable_words:
+        #         return False
 
         # The move must make at least one new word.
         if len(new_words) == 0:

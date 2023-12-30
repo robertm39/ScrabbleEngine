@@ -1,1 +1,3 @@
 from always_pass import AlwaysPassStrategy
+from random_word import RandomWordStrategy
+from highest_scoring_word import HighestScoringWordStrategy

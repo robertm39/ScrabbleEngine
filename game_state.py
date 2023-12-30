@@ -1,4 +1,5 @@
 from typing import (
+    Any,
     Self,
     Literal,
     MutableMapping,
@@ -10,6 +11,8 @@ from typing import (
 import copy
 from dataclasses import dataclass
 from frozendict import frozendict
+
+ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # A playable letter.
 LETTER = Literal[
@@ -138,11 +141,17 @@ def get_board_position(x: int, y: int) -> BoardPosition:
 class WordMultiplier:
     multiplier: int
 
+    def __hash__(self) -> int:
+        return hash(self.multiplier) ^ hash(type(self))
+
 
 # A multiplier on the board for a tile.
 @dataclass
 class TileMultiplier:
     multiplier: int
+
+    def __hash__(self) -> int:
+        return hash(self.multiplier) ^ hash(type(self))
 
 
 # Any multiplier on the board.
@@ -199,6 +208,7 @@ class GameConfig:
     min_tiles_for_bingo: int
     bingo_points: int
     scoreless_turns_to_end_game: int
+    config_name: str = ""
 
     def __init__(
         self,
@@ -208,6 +218,7 @@ class GameConfig:
         min_tiles_for_bonus: int,
         bonus_points: int,
         scoreless_turns_to_end_game: int,
+        config_name: str = "",
     ):
         self.playable_words = frozenset(playable_words)
         self.min_tiles_for_turn_in = min_tiles_for_turn_in
@@ -215,12 +226,19 @@ class GameConfig:
         self.min_tiles_for_bingo = min_tiles_for_bonus
         self.bingo_points = bonus_points
         self.scoreless_turns_to_end_game = scoreless_turns_to_end_game
+        self.config_name = config_name
 
 
 # A player in the game.
 @dataclass
 class Player:
     position: int
+    name: str = ""
+
+    def get_name_or_number(self) -> str:
+        if self.name == "":
+            return f"Player {self.position}"
+        return self.name
 
     def __hash__(self) -> int:
         return hash(self.position)
@@ -513,6 +531,7 @@ class GameState:
     bag: Bag
     board: Board
     num_scoreless_turns: int = 0
+    # turn_number: int = 0 #TODO add.
     game_finished: bool = False
 
     def __init__(
@@ -534,8 +553,17 @@ class GameState:
         self.game_finished = game_finished
 
     # Return a deep copy of this GameState.
-    def copy(self) -> Self:
-        return copy.deepcopy(self)
+    def copy(self) -> Any:
+        # return copy.deepcopy(self)
+        return GameState(
+            config=self.config,
+            current_player=self.current_player,
+            player_to_state=copy.deepcopy(self.player_to_state),
+            player_order=self.player_order,
+            bag=copy.deepcopy(self.bag),
+            board=copy.deepcopy(self.board),
+            game_finished=self.game_finished,
+        )
 
     # TODO get_visible_to(p: Player) -> VisibleGameState
 
