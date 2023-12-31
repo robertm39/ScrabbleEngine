@@ -7,6 +7,7 @@ import ai_strategies
 
 
 # Run a game of Scrabble.
+# TODO only give each player the state visible to it.
 def run_game(
     state: GameState, player_to_strategy: Mapping[Player, MoveGetter]
 ) -> Generator[tuple[Move | None, GameState], None, None]:

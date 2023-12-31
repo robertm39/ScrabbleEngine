@@ -3,6 +3,7 @@ import unittest
 from game_state import *
 from rules import *
 from utils import *
+from move_generation import *
 
 
 class UtilsTest(unittest.TestCase):
@@ -327,7 +328,8 @@ class StateTest(unittest.TestCase):
                 (2, 0): LetterTile("G"),
             }
         )
-        self.assertEqual(word.get_word(), "ZAG")
+        # self.assertEqual(word.get_word(), "ZAG")
+        self.assertEqual(word.word, "ZAG")
 
     def test_get_word_2(self):
         word = WordOnBoard(
@@ -337,7 +339,8 @@ class StateTest(unittest.TestCase):
                 (0, 2): BlankTile("G"),
             }
         )
-        self.assertEqual(word.get_word(), "ZAG")
+        # self.assertEqual(word.get_word(), "ZAG")
+        self.assertEqual(word.word, "ZAG")
 
     def test_get_tile_at_get_letter_at(self):
         board = get_board_from_strings(tile_string="CaT \n AAr")
@@ -1246,6 +1249,54 @@ class RulesTest(unittest.TestCase):
         exp_state.current_player = self.p1
 
         self.assertEqual(state, exp_state)
+
+
+class MoveGenerationTest(unittest.TestCase):
+    def setUp(self):
+        self.maxDiff = None
+
+    def test_trie(self):
+        trie = Trie()
+        self.assertNotIn("", trie)
+        trie.add("")
+        self.assertIn("", trie)
+        trie.add("CAT")
+        self.assertIn("CAT", trie)
+        self.assertNotIn("CA", trie)
+        self.assertNotIn("C", trie)
+
+        exp_tree = {None: dict(), "C": {"A": {"T": {None: dict()}}}}
+        self.assertDictEqual(trie.tree, exp_tree)
+
+        trie.add("CATS")
+        self.assertIn("CATS", trie)
+        exp_tree = {
+            None: dict(),
+            "C": {"A": {"T": {None: dict(), "S": {None: dict()}}}},
+        }
+        self.assertDictEqual(trie.tree, exp_tree)
+
+        trie.add("CARE")
+        self.assertIn("CARE", trie)
+        exp_tree = {
+            None: dict(),
+            "C": {
+                "A": {
+                    "T": {None: dict(), "S": {None: dict()}},
+                    "R": {"E": {None: dict()}},
+                }
+            },
+        }
+        self.assertDictEqual(trie.tree, exp_tree)
+
+    def test_prefix_trie_1(self):
+        p_trie = PrefixTrie()
+        p_trie.add("CARE")
+        self.assertIn(".CARE", p_trie.trie)
+        self.assertIn("C.ARE", p_trie.trie)
+        self.assertIn("AC.RE", p_trie.trie)
+        self.assertIn("RAC.E", p_trie.trie)
+        self.assertIn("ERAC", p_trie.trie)
 
 
 if __name__ == "__main__":  #

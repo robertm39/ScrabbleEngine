@@ -1,4 +1,5 @@
 from typing import (
+    cast,
     Any,
     Self,
     Literal,
@@ -8,6 +9,7 @@ from typing import (
     Sequence,
     Iterable,
 )
+from enum import Enum
 import copy
 from dataclasses import dataclass
 from frozendict import frozendict
@@ -43,6 +45,12 @@ LETTER = Literal[
     "Y",
     "Z",
 ]
+
+
+class Direction(Enum):
+    HORIZONTAL = "HORIZONTAL"
+    VERTICAL = "VERTICAL"
+
 
 # A playable word.
 WORD = str
@@ -99,41 +107,11 @@ class BlankTile(Tile):
         return self.letter == other.letter and self.points == other.points
 
 
-# # Any tile.
-# TILE = BasicTile | BlankTile
-
-
 BoardPosition = tuple[int, int]
 
 
 def get_board_position(x: int, y: int) -> BoardPosition:
     return x, y
-
-
-# # A position on the Scrabble board.
-# @dataclass
-# class BoardPosition:
-#     x: int  # Starting from 0, going from left to right.
-#     y: int  # Starting from 0, going from top to bottom.
-
-#     def __hash__(self) -> int:
-#         return hash(self.x) ^ hash(self.y)
-
-#     def __lt__(self, other: Self) -> bool:
-#         if self.y < other.y:
-#             return True
-#         return self.x < other.x
-
-#     def __le__(self, other: Self) -> bool:
-#         return (self < other) or (self == other)
-
-#     def __gt__(self, other: Self) -> bool:
-#         if self.y > other.y:
-#             return True
-#         return self.x > other.x
-
-#     def __ge__(self, other: Self) -> bool:
-#         return (self > other) or (self == other)
 
 
 # A multiplier on the board for a word.
@@ -156,48 +134,6 @@ class TileMultiplier:
 
 # Any multiplier on the board.
 Multiplier = WordMultiplier | TileMultiplier
-
-
-# # The configuration of the board.
-# @dataclass
-# class BoardConfig:
-#     width: int
-#     height: int
-#     position_to_multiplier: Mapping[BoardPosition, Multiplier]
-
-#     def contains_position(self, position: BoardPosition) -> bool:
-#         if position.x < 0 or position.y < 0:
-#             return False
-#         if self.width <= position.x or self.height <= position.y:
-#             return False
-#         return True
-
-
-# # The configuration of a Scrabble game.
-# @dataclass
-# class ScrabbleConfig:
-#     board_config: BoardConfig
-#     playable_words: Collection[WORD]
-#     tiles: Collection[Tile]
-#     max_tiles_in_hand: int
-#     min_tiles_for_bingo: int
-#     bingo_points: int
-
-#     def __init__(
-#         self,
-#         board_config: BoardConfig,
-#         playable_words: Collection[WORD],
-#         tiles: Collection[Tile],
-#         max_tiles_in_hand: int,
-#         min_tiles_for_bingo: int,
-#         bingo_points: int,
-#     ) -> None:
-#         self.board_config = board_config
-#         self.playable_words = set(playable_words)
-#         self.tiles = tuple(tiles)
-#         self.max_tiles_in_hand = max_tiles_in_hand
-#         self.min_tiles_for_bingo = min_tiles_for_bingo
-#         self.bingo_points = bingo_points
 
 
 @dataclass
@@ -297,86 +233,6 @@ class VisibleTileBagState:
     tiles: list[None]
 
 
-# # Any placing of a tile.
-# class TilePlacing(ABC):
-#     @property
-#     @abstractmethod
-#     def position(self) -> BoardPosition:
-#         ...
-
-#     @property
-#     @abstractmethod
-#     def tile(self) -> Tile:
-#         ...
-
-#     @property
-#     @abstractmethod
-#     def letter(self) -> LETTER:
-#         ...
-
-
-# # A placing of a single non-blank tile.
-# # @dataclass
-# class LetterTilePlacing(TilePlacing):
-#     # tile: BasicTile
-#     # position: BoardPosition
-#     def __init__(self, tile: LetterTile, position: BoardPosition) -> None:
-#         self._tile = tile
-#         self._position = position
-
-#     @property
-#     def tile(self) -> Tile:
-#         return self._tile
-
-#     @property
-#     def position(self) -> BoardPosition:
-#         return self._position
-
-#     @property
-#     def letter(self) -> LETTER:
-#         return self.tile.letter  # type: ignore
-
-#     def __eq__(self, other):
-#         if not isinstance(other, type(self)):
-#             return False
-#         return self.tile == other.tile and self.position == other.position
-
-
-# # A placing of a blank tile.
-# # @dataclass
-# class BlankTilePlacing(TilePlacing):
-#     # tile: BlankTile
-#     # position: BoardPosition
-#     # letter: LETTER
-#     def __init__(
-#         self, tile: BlankTile, position: BoardPosition, letter: LETTER
-#     ) -> None:
-#         self._tile = tile
-#         self._position = position
-#         self._letter = letter
-
-#     @property
-#     def tile(self) -> Tile:
-#         return self._tile
-
-#     @property
-#     def position(self) -> BoardPosition:
-#         return self._position
-
-#     @property
-#     def letter(self) -> LETTER:
-#         return self._letter  # type: ignore
-
-#     def __eq__(self, other):
-#         if not isinstance(other, type(self)):
-#             return False
-#         return (
-#             self.tile == other.tile
-#             and self.position == other.position
-#             and self.letter == other.letter
-#         )
-
-
 # A word on the board.
 @dataclass
 class WordOnBoard:
@@ -385,12 +241,30 @@ class WordOnBoard:
     def __init__(self, position_to_tile: Mapping[BoardPosition, Tile]) -> None:
         self.position_to_tile = frozendict(position_to_tile)
 
-    # Return the word spelled out in these tiles.
-    def get_word(self) -> WORD:
+        if len(self.position_to_tile) == 1:
+            self.direction = Direction.HORIZONTAL
+        else:
+            p1, p2 = list(self.position_to_tile)[:2]
+            if p1[0] != p2[0]:
+                self.direction = Direction.HORIZONTAL
+            else:
+                self.direction = Direction.VERTICAL
+        
+        # self.word = self.get_word()
         pairs = list(self.position_to_tile.items())
         pairs.sort(key=lambda p: p[0][0] + p[0][1])
         letters = [p[1].letter for p in pairs]  # type: ignore
-        return "".join(letters)
+        self.word = cast(str, "".join(letters))
+
+    # # Return the word spelled out in these tiles.
+    # def get_word(self) -> WORD:
+    #     pairs = list(self.position_to_tile.items())
+    #     pairs.sort(key=lambda p: p[0][0] + p[0][1])
+    #     letters = [p[1].letter for p in pairs]  # type: ignore
+    #     return "".join(letters)
+
+    # @property
+    # def direction(self) -> Direction:
 
 
 # Return all positions adjacent to one of the given positions, but not equal to one of the given positions.

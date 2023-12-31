@@ -202,7 +202,8 @@ class PlaceTilesMove(Move):
         # Reordering this as well. (bad idea?)
         # All words made by this placement must be in the dictionary.
         new_words = self.get_words_made(board=state.board)
-        new_word_vals = [w.get_word() for w in new_words]
+        # new_word_vals = [w.get_word() for w in new_words]
+        new_word_vals = [w.word for w in new_words]
         for word in new_word_vals:
             if not word in state.config.playable_words:
                 return False
@@ -492,6 +493,7 @@ class PassMove(Move):
         advance_player(state)
 
 
+# TODO Take only the state visible to the player.
 # A move-getter. Either an AI or a human player.
 class MoveGetter(ABC):
     @abstractmethod

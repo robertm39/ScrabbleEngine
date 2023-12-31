@@ -1,3 +1,4 @@
+# from typing
 import itertools
 
 from game_state import *
@@ -125,6 +126,11 @@ def get_placements(state: GameState, x: int, y: int) -> list[PlaceTilesMove]:
 #     return result
 
 
+# This doesn't even find all of the legal moves. TODO fix.
+# Specifically, it only tries permutations of tiles that are themselves legal words,
+# which skips some moves where letters on the board are the beginning, middle or end of a word.
+# This actually skips a very large number of moves.
+
 # Return all legal tile-placements for the given player in the given state.
 def get_all_place_tiles_moves_naive(
     state: GameState,  # , player: Player
@@ -205,3 +211,63 @@ def get_all_place_tiles_moves_naive(
                                 result.append(move)
 
     return result
+
+
+TREE = dict[str | None, "TREE"]
+
+
+class Trie:
+    def __init__(self) -> None:
+        self.tree = TREE()
+
+    # Add the given string to the given subtree in this trie.
+    def _add(self, tree: TREE, s: str) -> None:
+        # If the string is empty, mark this as a terminal node.
+        if len(s) == 0:
+            tree[None] = TREE()
+            return
+        c, rest = s[:1], s[1:]
+        if not c in tree:
+            tree[c] = TREE()
+        self._add(tree=tree[c], s=rest)
+
+    # Add the given string to this trie.
+    def add(self, s: str) -> None:
+        self._add(tree=self.tree, s=s)
+
+    # Return whether the given string is in the given subtree in this trie.
+    def _contains(self, tree: TREE, s: str) -> bool:
+        if len(s) == 0:
+            return None in tree
+        c, rest = s[:1], s[1:]
+        subtree = tree.get(c, None)
+        if subtree is None:
+            return False
+        return self._contains(tree=subtree, s=rest)
+
+    # Return whether the given string is in this trie.
+    def __contains__(self, s: Any) -> bool:
+        if not isinstance(s, str):
+            return False
+        return self._contains(tree=self.tree, s=s)
+
+
+PREFIX_TRIE_DELIMITER = "."
+
+
+class PrefixTrie:
+    def __init__(self, delimiter=PREFIX_TRIE_DELIMITER) -> None:
+        self.trie = Trie()
+        self.delimiter = delimiter
+
+    def add(self, s: str) -> None:
+        # Add all orderings except for the one where the entire word is the prefix.
+        for middle_index in range(len(s)):
+            prefix_and_suffix = (
+                s[:middle_index][::-1] + self.delimiter + s[middle_index:]
+            )
+            self.trie.add(prefix_and_suffix)
+
+        # Add the ordering where the entire word is the prefix,
+        # which doesn't make use of the delimiter at all.
+        self.trie.add(s[::-1])
