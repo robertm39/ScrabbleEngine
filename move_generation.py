@@ -321,6 +321,7 @@ class PlaceTilesState:
     tiles_left: Sequence[Tile]
     before_begin_pos: BoardPosition
     after_end_pos: BoardPosition
+    ignore_one_tile_moves: bool
 
     def __init__(
         self,
@@ -330,6 +331,7 @@ class PlaceTilesState:
         tiles_left: list[Tile],
         before_begin_pos: BoardPosition,
         after_end_pos: BoardPosition,
+        ignore_one_tile_moves=False,
     ) -> None:
         self.pos_to_tile_placed = frozendict(pos_to_tile_placed)
         self.start_pos = start_pos
@@ -337,6 +339,7 @@ class PlaceTilesState:
         self.tiles_left = tuple(tiles_left)
         self.before_begin_pos = before_begin_pos
         self.after_end_pos = after_end_pos
+        self.ignore_one_tile_moves = ignore_one_tile_moves
 
 
 # Return all the possible tile-placings at the given spot, given the acceptable letters.
@@ -376,9 +379,10 @@ class PlaceTilesMoveFinder:
 
         # See if the current state already makes a word.
         # If it does, and if it at least one tile has been placed, count that.
+        min_tiles_for_move = 2 if place_tiles_state.ignore_one_tile_moves else 1
         if (place_tiles_state.word in self.words) and len(
             place_tiles_state.pos_to_tile_placed
-        ) > 0:
+        ) >= min_tiles_for_move:
             move = PlaceTilesMove(
                 position_to_placing=place_tiles_state.pos_to_tile_placed
             )
@@ -833,15 +837,86 @@ class PlaceTilesMoveFinder:
 
         return result
 
-    # Return all moves that start at the given already-played position, go out one square in one axis,
-    # and then go out along the other axis.
-    def _get_all_curve_moves(
+    # Return all vertical offset moves from the given position.
+    def _get_all_vertical_offset_moves(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        pos: BoardPosition,
+    ) -> list[PlaceTilesMove]:
+        # TODO eliminate redundant results.
+
+        result = list[PlaceTilesMove]()
+        x, y = pos
+        board = state.board
+
+        # # Determine the current horizontal word at this position.
+        # horizontal_word = cast(str, board.get_letter_at(pos))
+        # c_x = x
+        # while True:
+        #     c_x += 1
+        #     l = board.get_letter_at((c_x, y))
+        #     if l is None:
+        #         break
+        #     horizontal_word = horizontal_word + l
+        # c_x = x
+        # while True:
+        #     c_x -= 1
+        #     l = board.get_letter_at((c_x, y))
+        #     if l is None:
+        #         break
+        #     horizontal_word = l + horizontal_word
+
+        # If the spot to the right is open, try to make vertical moves there.
+        spot_to_right = x + 1, y
+        if state.board.get_tile_at(spot_to_right) is None:
+            # TODO Maybe see what the vertical prefix and suffix for the word would be
+            # in order to narrow down what letters we'll try to place.
+
+            # See what tiles we can place there.
+            # ok_letters = self.infix_data.get_all_suffixes(horizontal_word)
+            unique_tiles = set(state.player_to_state[state.current_player].tiles)
+            ok_side_letters = playable_letter_info.pos_to_vertical_letters[
+                spot_to_right
+            ]
+            for tile in unique_tiles:
+                placings = get_all_possible_placings(ok_side_letters=ok_side_letters, ok_letters=ALPHABET, tile=tile)  # type: ignore
+                # TODO For each placing, see all vertical words you can make with it.
+                
+
+        return result
+
+    # Return all horizontal offset moves from the given position.
+    def _get_all_horizontal_offset_moves(
         self,
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
     ) -> list[PlaceTilesMove]:
         result = list[PlaceTilesMove]()
+
+        return result
+
+    # Return all moves that start at the given already-played position, go out one square in one axis,
+    # and then go out along the other axis.
+    def _get_all_offset_moves(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        pos: BoardPosition,
+    ) -> list[PlaceTilesMove]:
+        result = list[PlaceTilesMove]()
+
+        result.extend(
+            self._get_all_vertical_offset_moves(
+                state=state, playable_letter_info=playable_letter_info, pos=pos
+            )
+        )
+        result.extend(
+            self._get_all_horizontal_offset_moves(
+                state=state, playable_letter_info=playable_letter_info, pos=pos
+            )
+        )
 
         return result
 
@@ -860,7 +935,7 @@ class PlaceTilesMoveFinder:
                 )
             )
             result.extend(
-                self._get_all_curve_moves(
+                self._get_all_offset_moves(
                     state=state, playable_letter_info=playable_letter_info, pos=pos
                 )
             )
