@@ -434,9 +434,9 @@ class GameState:
         self.game_finished = game_finished
 
     # Return a deep copy of this GameState.
-    def copy(self) -> Any:
+    def copy(self) -> Self:
         # return copy.deepcopy(self)
-        return GameState(
+        val = GameState(
             config=self.config,
             current_player=self.current_player,
             player_to_state=copy.deepcopy(self.player_to_state),
@@ -445,6 +445,16 @@ class GameState:
             board=copy.deepcopy(self.board),
             game_finished=self.game_finished,
         )
+        return val  # type: ignore
+        # return GameState(
+        #     config=self.config,
+        #     current_player=self.current_player,
+        #     player_to_state=copy.deepcopy(self.player_to_state),
+        #     player_order=self.player_order,
+        #     bag=copy.deepcopy(self.bag),
+        #     board=copy.deepcopy(self.board),
+        #     game_finished=self.game_finished,
+        # )
 
     # TODO get_visible_to(p: Player) -> VisibleGameState
 

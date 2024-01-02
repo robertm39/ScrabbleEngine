@@ -215,66 +215,6 @@ def get_all_place_tiles_moves_naive(
     return result
 
 
-# TREE = dict[str | None, "TREE"]
-
-
-# class Trie:
-#     def __init__(self) -> None:
-#         self.tree = TREE()
-
-#     # Add the given string to the given subtree in this trie.
-#     def _add(self, tree: TREE, s: str) -> None:
-#         # If the string is empty, mark this as a terminal node.
-#         if len(s) == 0:
-#             tree[None] = TREE()
-#             return
-#         c, rest = s[:1], s[1:]
-#         if not c in tree:
-#             tree[c] = TREE()
-#         self._add(tree=tree[c], s=rest)
-
-#     # Add the given string to this trie.
-#     def add(self, s: str) -> None:
-#         self._add(tree=self.tree, s=s)
-
-#     # Return whether the given string is in the given subtree in this trie.
-#     def _contains(self, tree: TREE, s: str) -> bool:
-#         if len(s) == 0:
-#             return None in tree
-#         c, rest = s[:1], s[1:]
-#         subtree = tree.get(c, None)
-#         if subtree is None:
-#             return False
-#         return self._contains(tree=subtree, s=rest)
-
-#     # Return whether the given string is in this trie.
-#     def __contains__(self, s: Any) -> bool:
-#         if not isinstance(s, str):
-#             return False
-#         return self._contains(tree=self.tree, s=s)
-
-
-# PREFIX_TRIE_DELIMITER = "."
-
-
-# class PrefixTrie:
-#     def __init__(self, delimiter=PREFIX_TRIE_DELIMITER) -> None:
-#         self.trie = Trie()
-#         self.delimiter = delimiter
-
-#     def add(self, s: str) -> None:
-#         # Add all orderings except for the one where the entire word is the prefix.
-#         for middle_index in range(len(s)):
-#             prefix_and_suffix = (
-#                 s[:middle_index][::-1] + self.delimiter + s[middle_index:]
-#             )
-#             self.trie.add(prefix_and_suffix)
-
-#         # Add the ordering where the entire word is the prefix,
-#         # which doesn't make use of the delimiter at all.
-#         self.trie.add(s[::-1])
-
-
 # Information about what letters can be played where. (This could be computed only on parts of the board that changed.)
 class PlayableLetterInfo:
     def __init__(
@@ -288,6 +228,8 @@ class PlayableLetterInfo:
 
         # See what letters can be placed vertically in each spot.
         for pos in board.all_positions():
+            # if pos in [(7, 6), (7, 8)]:
+            #     pass
             # The letters that make horizontal words can be placed vertically.
             prefix = self._get_horizontal_prefix(pos=pos)
             suffix = self._get_horizontal_suffix(pos=pos)
@@ -300,7 +242,9 @@ class PlayableLetterInfo:
             possible_middle_letters = [c for c in after_prefix if c in before_suffix]
             middle_letters = list[LETTER]()
             for c in possible_middle_letters:
-                if prefix + c + suffix in self.words:
+                # See the horizontal word made.
+                overall_word = prefix + c + suffix
+                if len(overall_word) == 1 or (overall_word in self.words):
                     middle_letters.append(c)  # type: ignore
             pos_to_vertical_letters[pos] = tuple(middle_letters)
         self.pos_to_vertical_letters = frozendict(pos_to_vertical_letters)
@@ -393,16 +337,17 @@ class PlaceTilesState:
 
 # Return all the possible tile-placings at the given spot, given the acceptable letters.
 def get_all_possible_placings(
-    ok_letters: Collection[LETTER], tile: Tile
+    ok_side_letters: Collection[LETTER], ok_letters: Collection[LETTER], tile: Tile
 ) -> list[TilePlacing]:
     # Get all of the possible tile-placings.
     placings = list[TilePlacing]()
     if isinstance(tile, BlankTile):
-        for letter in ok_letters:
-            placings.append(BlankTilePlacing(tile=tile, letter=letter))
+        for letter in ok_side_letters:
+            if letter in ok_letters:
+                placings.append(BlankTilePlacing(tile=tile, letter=letter))
     elif isinstance(tile, LetterTile):
         # If the letter is okay, we can place this tile here.
-        if tile.letter in ok_letters:
+        if tile.letter in ok_side_letters and tile.letter in ok_letters:
             placings.append(LetterTilePlacing(tile=tile))
     return placings
     # new_tiles_left = list(place_tiles_state.tiles_left)
@@ -447,10 +392,13 @@ class PlaceTilesMoveFinder:
         ok_letters = playable_letter_info.pos_to_vertical_letters.get(
             place_pos, tuple[LETTER, ...]()
         )
+        ok_suffixes = self.infix_data.get_all_suffixes(place_tiles_state.word)
         unique_tiles = set(place_tiles_state.tiles_left)
         for tile in unique_tiles:
             # Get all of the possible tile-placings.
-            placings = get_all_possible_placings(ok_letters=ok_letters, tile=tile)
+            placings = get_all_possible_placings(
+                ok_side_letters=ok_letters, ok_letters=ok_suffixes, tile=tile  # type: ignore
+            )
             new_tiles_left = list(place_tiles_state.tiles_left)
             new_tiles_left.remove(tile)
 
@@ -526,9 +474,12 @@ class PlaceTilesMoveFinder:
             ok_letters = playable_letter_info.pos_to_vertical_letters.get(
                 place_pos, tuple[LETTER, ...]()
             )
+            ok_prefixes = self.infix_data.get_all_prefixes(place_tiles_state.word)
             for tile in unique_tiles:
                 # Get all of the possible tile-placings.
-                placings = get_all_possible_placings(ok_letters=ok_letters, tile=tile)
+                placings = get_all_possible_placings(
+                    ok_side_letters=ok_letters, ok_letters=ok_prefixes, tile=tile  # type: ignore
+                )
                 # placings = list[TilePlacing]()
                 # if isinstance(tile, BlankTile):
                 #     for letter in ok_letters:
@@ -642,7 +593,6 @@ class PlaceTilesMoveFinder:
             playable_letter_info=playable_letter_info,
             place_tiles_state=place_tiles_state,
         )
-
 
     # Return all moves that start at the given already-played position and go out along the horizontal axis.
     def _get_all_horizontal_straight_moves(

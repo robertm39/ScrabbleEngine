@@ -11,12 +11,14 @@ class InfixData:
         self.words = set(words)
 
         alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        # From a letter to the strings that can have that letter added to them at the start.
         can_add_at_start = {c: set[str]() for c in alphabet}
+        # From a letter to the strings that can have that letter added to them at the end.
         can_add_at_end = {c: set[str]() for c in alphabet}
 
         for word in self.words:
             for i in range(len(word)):
-                for l in range(1, len(word) - i):
+                for l in range(1, len(word) - i+1):
                     j = i + l
                     substring = word[i:j]
                     if i > 0:
