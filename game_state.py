@@ -1,6 +1,7 @@
 from typing import (
     cast,
     Any,
+    Generator,
     Self,
     Literal,
     MutableMapping,
@@ -249,7 +250,7 @@ class WordOnBoard:
                 self.direction = Direction.HORIZONTAL
             else:
                 self.direction = Direction.VERTICAL
-        
+
         # self.word = self.get_word()
         pairs = list(self.position_to_tile.items())
         pairs.sort(key=lambda p: p[0][0] + p[0][1])
@@ -303,6 +304,12 @@ class Board:
         self.starting_position = starting_position
         self.position_to_tile = dict(position_to_tile)
         self.position_to_multiplier = frozendict(position_to_multiplier)
+
+    # Yield all positions on the board. TODO unit-test.
+    def all_positions(self) -> Generator[BoardPosition, None, None]:
+        for x in range(self.width):
+            for y in range(self.height):
+                yield x, y
 
     # Return whether the given position is on the board.
     def contains_position(self, position: BoardPosition) -> bool:

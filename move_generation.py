@@ -3,6 +3,7 @@ import itertools
 
 from game_state import *
 from rules import *
+import infix_data
 
 
 # def get_horizontal_placements_for_word(
@@ -131,6 +132,7 @@ def get_placements(state: GameState, x: int, y: int) -> list[PlaceTilesMove]:
 # which skips some moves where letters on the board are the beginning, middle or end of a word.
 # This actually skips a very large number of moves.
 
+
 # Return all legal tile-placements for the given player in the given state.
 def get_all_place_tiles_moves_naive(
     state: GameState,  # , player: Player
@@ -213,61 +215,498 @@ def get_all_place_tiles_moves_naive(
     return result
 
 
-TREE = dict[str | None, "TREE"]
+# TREE = dict[str | None, "TREE"]
 
 
-class Trie:
-    def __init__(self) -> None:
-        self.tree = TREE()
+# class Trie:
+#     def __init__(self) -> None:
+#         self.tree = TREE()
 
-    # Add the given string to the given subtree in this trie.
-    def _add(self, tree: TREE, s: str) -> None:
-        # If the string is empty, mark this as a terminal node.
-        if len(s) == 0:
-            tree[None] = TREE()
-            return
-        c, rest = s[:1], s[1:]
-        if not c in tree:
-            tree[c] = TREE()
-        self._add(tree=tree[c], s=rest)
+#     # Add the given string to the given subtree in this trie.
+#     def _add(self, tree: TREE, s: str) -> None:
+#         # If the string is empty, mark this as a terminal node.
+#         if len(s) == 0:
+#             tree[None] = TREE()
+#             return
+#         c, rest = s[:1], s[1:]
+#         if not c in tree:
+#             tree[c] = TREE()
+#         self._add(tree=tree[c], s=rest)
 
-    # Add the given string to this trie.
-    def add(self, s: str) -> None:
-        self._add(tree=self.tree, s=s)
+#     # Add the given string to this trie.
+#     def add(self, s: str) -> None:
+#         self._add(tree=self.tree, s=s)
 
-    # Return whether the given string is in the given subtree in this trie.
-    def _contains(self, tree: TREE, s: str) -> bool:
-        if len(s) == 0:
-            return None in tree
-        c, rest = s[:1], s[1:]
-        subtree = tree.get(c, None)
-        if subtree is None:
-            return False
-        return self._contains(tree=subtree, s=rest)
+#     # Return whether the given string is in the given subtree in this trie.
+#     def _contains(self, tree: TREE, s: str) -> bool:
+#         if len(s) == 0:
+#             return None in tree
+#         c, rest = s[:1], s[1:]
+#         subtree = tree.get(c, None)
+#         if subtree is None:
+#             return False
+#         return self._contains(tree=subtree, s=rest)
 
-    # Return whether the given string is in this trie.
-    def __contains__(self, s: Any) -> bool:
-        if not isinstance(s, str):
-            return False
-        return self._contains(tree=self.tree, s=s)
-
-
-PREFIX_TRIE_DELIMITER = "."
+#     # Return whether the given string is in this trie.
+#     def __contains__(self, s: Any) -> bool:
+#         if not isinstance(s, str):
+#             return False
+#         return self._contains(tree=self.tree, s=s)
 
 
-class PrefixTrie:
-    def __init__(self, delimiter=PREFIX_TRIE_DELIMITER) -> None:
-        self.trie = Trie()
-        self.delimiter = delimiter
+# PREFIX_TRIE_DELIMITER = "."
 
-    def add(self, s: str) -> None:
-        # Add all orderings except for the one where the entire word is the prefix.
-        for middle_index in range(len(s)):
-            prefix_and_suffix = (
-                s[:middle_index][::-1] + self.delimiter + s[middle_index:]
+
+# class PrefixTrie:
+#     def __init__(self, delimiter=PREFIX_TRIE_DELIMITER) -> None:
+#         self.trie = Trie()
+#         self.delimiter = delimiter
+
+#     def add(self, s: str) -> None:
+#         # Add all orderings except for the one where the entire word is the prefix.
+#         for middle_index in range(len(s)):
+#             prefix_and_suffix = (
+#                 s[:middle_index][::-1] + self.delimiter + s[middle_index:]
+#             )
+#             self.trie.add(prefix_and_suffix)
+
+#         # Add the ordering where the entire word is the prefix,
+#         # which doesn't make use of the delimiter at all.
+#         self.trie.add(s[::-1])
+
+
+# Information about what letters can be played where. (This could be computed only on parts of the board that changed.)
+class PlayableLetterInfo:
+    def __init__(
+        self, board: Board, words: Collection[WORD], infix_info: infix_data.InfixData
+    ) -> None:
+        self.board = board
+        self.words = frozenset(words)
+        self.infix_info = infix_info
+
+        pos_to_vertical_letters = dict[BoardPosition, tuple[LETTER, ...]]()
+
+        # See what letters can be placed vertically in each spot.
+        for pos in board.all_positions():
+            # The letters that make horizontal words can be placed vertically.
+            prefix = self._get_horizontal_prefix(pos=pos)
+            suffix = self._get_horizontal_suffix(pos=pos)
+
+            # We could just use the entire alphabet for possible_middle_letters. TODO check which approach is faster.
+            after_prefix = self.infix_info.get_all_suffixes(prefix)
+            before_suffix = self.infix_info.get_all_prefixes(suffix)
+
+            # before_suffix = self.infix_info.infix_to_prefixes.get(suffix, frozenset())
+            possible_middle_letters = [c for c in after_prefix if c in before_suffix]
+            middle_letters = list[LETTER]()
+            for c in possible_middle_letters:
+                if prefix + c + suffix in self.words:
+                    middle_letters.append(c)  # type: ignore
+            pos_to_vertical_letters[pos] = tuple(middle_letters)
+        self.pos_to_vertical_letters = frozendict(pos_to_vertical_letters)
+
+        # See what letters can be placed horizontally in each spot.
+        pos_to_horizontal_letters = dict[BoardPosition, tuple[LETTER, ...]]()
+        for pos in board.all_positions():
+            # The letters that make vertical words can be placed horizontally.
+            prefix = self._get_vertical_prefix(pos=pos)
+            suffix = self._get_vertical_suffix(pos=pos)
+
+            # We could just use the entire alphabet for possible_middle_letters. TODO check which approach is faster.
+            after_prefix = self.infix_info.get_all_suffixes(prefix)
+            before_suffix = self.infix_info.get_all_prefixes(suffix)
+
+            possible_middle_letters = [c for c in after_prefix if c in before_suffix]
+            middle_letters = list[LETTER]()
+            for c in possible_middle_letters:
+                if prefix + c + suffix in self.words:
+                    middle_letters.append(c)  # type: ignore
+            pos_to_horizontal_letters[pos] = tuple(middle_letters)
+        self.pos_to_horizontal_letters = frozendict(pos_to_horizontal_letters)
+
+    def _get_horizontal_affix(self, pos: BoardPosition, inc: Literal[-1, 1]) -> str:
+        x, y = pos
+        backwards_prefix = list[str]()
+        while True:
+            x += inc
+            letter = self.board.get_letter_at((x, y))
+            if letter is None:
+                break
+            backwards_prefix.append(letter)
+        return "".join(backwards_prefix[::inc])  # Reverse it if we went backwards.
+
+    # Return the horizontal prefix before this spot.
+    def _get_horizontal_prefix(self, pos: BoardPosition) -> str:
+        return self._get_horizontal_affix(pos=pos, inc=-1)
+
+    # Return the horizontal suffix after this spot.
+    def _get_horizontal_suffix(self, pos: BoardPosition) -> str:
+        return self._get_horizontal_affix(pos=pos, inc=1)
+
+    def _get_vertical_affix(self, pos: BoardPosition, inc: Literal[-1, 1]) -> str:
+        # TODO Eliminate this redundancy.
+        x, y = pos
+        backwards_prefix = list[str]()
+        while True:
+            y += inc
+            letter = self.board.get_letter_at((x, y))
+            if letter is None:
+                break
+            backwards_prefix.append(letter)
+        return "".join(backwards_prefix[::inc])  # Reverse it if we went backwards.
+
+    # Return the vertical prefix above this spot.
+    def _get_vertical_prefix(self, pos: BoardPosition) -> str:
+        return self._get_vertical_affix(pos=pos, inc=-1)
+
+    # Return the vertical suffix below this spot.
+    def _get_vertical_suffix(self, pos: BoardPosition) -> str:
+        return self._get_vertical_affix(pos=pos, inc=1)
+
+
+# The state of the algorithm for finding the tiles to place.
+@dataclass
+class PlaceTilesState:
+    pos_to_tile_placed: Mapping[BoardPosition, TilePlacing]
+    start_pos: BoardPosition
+    word: str
+    tiles_left: Sequence[Tile]
+    before_begin_pos: BoardPosition
+    after_end_pos: BoardPosition
+
+    def __init__(
+        self,
+        pos_to_tile_placed: dict[BoardPosition, TilePlacing],
+        start_pos: BoardPosition,
+        word: str,
+        tiles_left: list[Tile],
+        before_begin_pos: BoardPosition,
+        after_end_pos: BoardPosition,
+    ) -> None:
+        self.pos_to_tile_placed = frozendict(pos_to_tile_placed)
+        self.start_pos = start_pos
+        self.word = word
+        self.tiles_left = tuple(tiles_left)
+        self.before_begin_pos = before_begin_pos
+        self.after_end_pos = after_end_pos
+
+
+# Return all the possible tile-placings at the given spot, given the acceptable letters.
+def get_all_possible_placings(
+    ok_letters: Collection[LETTER], tile: Tile
+) -> list[TilePlacing]:
+    # Get all of the possible tile-placings.
+    placings = list[TilePlacing]()
+    if isinstance(tile, BlankTile):
+        for letter in ok_letters:
+            placings.append(BlankTilePlacing(tile=tile, letter=letter))
+    elif isinstance(tile, LetterTile):
+        # If the letter is okay, we can place this tile here.
+        if tile.letter in ok_letters:
+            placings.append(LetterTilePlacing(tile=tile))
+    return placings
+    # new_tiles_left = list(place_tiles_state.tiles_left)
+    # new_tiles_left.remove(tile)
+
+
+# Finds place-tiles moves.
+class PlaceTilesMoveFinder:
+    def __init__(self, words: Collection[WORD]) -> None:
+        self.words = frozenset(words)
+        self.infix_data = infix_data.InfixData(words=self.words)
+
+    # Return all vertical moves, only going down.
+    # Assumes that there is no tile directly above or below the column of already-placed tiles. TODO check for this.
+    def _rec_get_all_vertical_moves_down(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        place_tiles_state: PlaceTilesState,
+    ) -> list[PlaceTilesMove]:
+        result = list[PlaceTilesMove]()
+
+        # See if the current state already makes a word.
+        # If it does, and if it at least one tile has been placed, count that.
+        if (place_tiles_state.word in self.words) and len(
+            place_tiles_state.pos_to_tile_placed
+        ) > 0:
+            move = PlaceTilesMove(
+                position_to_placing=place_tiles_state.pos_to_tile_placed
             )
-            self.trie.add(prefix_and_suffix)
+            result.append(move)
 
-        # Add the ordering where the entire word is the prefix,
-        # which doesn't make use of the delimiter at all.
-        self.trie.add(s[::-1])
+        # Check if there's any room to place tiles. If there isn't, we can't make any more moves.
+        place_pos = place_tiles_state.after_end_pos
+        if not state.board.contains_position(place_pos):
+            return result
+
+        # For each tile we could place, try placing it, add all the tiles beneath it, and see if it's still okay.
+        # If it is, recursively get all words you can make with it placed.
+        # # Also, if it's already a word, add that.
+        x = place_pos[0]
+        ok_letters = playable_letter_info.pos_to_vertical_letters.get(
+            place_pos, tuple[LETTER, ...]()
+        )
+        unique_tiles = set(place_tiles_state.tiles_left)
+        for tile in unique_tiles:
+            # Get all of the possible tile-placings.
+            placings = get_all_possible_placings(ok_letters=ok_letters, tile=tile)
+            new_tiles_left = list(place_tiles_state.tiles_left)
+            new_tiles_left.remove(tile)
+
+            for placing in placings:
+                current_word = place_tiles_state.word + placing.letter
+
+                # Add all of the tiles already there, skipping if they can't make a word.
+                check_y = place_pos[1]
+                placing_works = True
+                while True:
+                    check_y += 1
+                    letter_below = state.board.get_letter_at((x, check_y))
+                    if letter_below is None:
+                        # We're past all of the tiles at the top.
+                        break
+                    ok_suffixes = self.infix_data.get_all_suffixes(current_word)
+                    if not letter_below in ok_suffixes:
+                        placing_works = False
+                        break
+                    current_word = current_word + letter_below
+                if not placing_works:
+                    continue
+
+                # As far as we're aware, this placing could work.
+                # Recursively get all moves with this tile placed.
+                new_after_end_pos = x, check_y
+                new_pos_to_tile_placed = dict(place_tiles_state.pos_to_tile_placed)
+                new_pos_to_tile_placed[place_pos] = placing
+
+                new_place_tiles_state = PlaceTilesState(
+                    pos_to_tile_placed=new_pos_to_tile_placed,
+                    start_pos=place_tiles_state.start_pos,
+                    word=current_word,
+                    tiles_left=new_tiles_left,
+                    before_begin_pos=place_tiles_state.before_begin_pos,
+                    after_end_pos=new_after_end_pos,
+                )
+                result.extend(
+                    self._rec_get_all_vertical_moves_down(
+                        state=state,
+                        playable_letter_info=playable_letter_info,
+                        place_tiles_state=new_place_tiles_state,
+                    )
+                )
+
+        return result
+
+    # The recursive part for getting all vertical moves.
+    # Assumes that there is no tile directly above or below the column of already-placed tiles. TODO check for this.
+    def _rec_get_all_vertical_moves(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        place_tiles_state: PlaceTilesState,
+    ) -> list[PlaceTilesMove]:
+        result = list[PlaceTilesMove]()
+
+        # Get all moves going down from here.
+        result.extend(
+            self._rec_get_all_vertical_moves_down(
+                state=state,
+                playable_letter_info=playable_letter_info,
+                place_tiles_state=place_tiles_state,
+            )
+        )
+
+        # Check if there's room on the board to place a tile above us.
+        if state.board.contains_position(place_tiles_state.before_begin_pos):
+            # For each tile we could place above us, recursively get all moves with it placed.
+            unique_tiles = set(place_tiles_state.tiles_left)
+            place_pos = place_tiles_state.before_begin_pos
+            x = place_pos[0]
+            ok_letters = playable_letter_info.pos_to_vertical_letters.get(
+                place_pos, tuple[LETTER, ...]()
+            )
+            for tile in unique_tiles:
+                # Get all of the possible tile-placings.
+                placings = get_all_possible_placings(ok_letters=ok_letters, tile=tile)
+                # placings = list[TilePlacing]()
+                # if isinstance(tile, BlankTile):
+                #     for letter in ok_letters:
+                #         placings.append(BlankTilePlacing(tile=tile, letter=letter))
+                # elif isinstance(tile, LetterTile):
+                #     # If we can't place this tile here, don't try.
+                #     if tile.letter not in ok_letters:
+                #         continue
+                #     placings.append(LetterTilePlacing(tile=tile))
+                new_tiles_left = list(place_tiles_state.tiles_left)
+                new_tiles_left.remove(tile)
+
+                # For each placing, add all tiles right above it and see if it works.
+                # If it does, recursively get all moves using it.
+                for placing in placings:
+                    current_word = placing.letter + place_tiles_state.word
+
+                    # Add all of the tiles already there, skipping if they can't make a word.
+                    check_y = place_pos[1]
+                    placing_works = True
+                    while True:
+                        check_y -= 1
+                        letter_above = state.board.get_letter_at((x, check_y))
+                        if letter_above is None:
+                            # We're past all of the tiles at the top.
+                            break
+                        ok_prefixes = self.infix_data.get_all_prefixes(current_word)
+                        if not letter_above in ok_prefixes:
+                            placing_works = False
+                            break
+                        current_word = letter_above + current_word
+                    new_before_begin_pos = x, check_y
+
+                    # If the placing doesn't work, don't use it.
+                    # Whether the placing works depends only on the letter placed,
+                    # so this method will do some redundant computation when there are blank tiles. TODO fix, if necessary.
+                    if not placing_works:
+                        continue
+
+                    # As far as we're aware, this placing could work.
+                    new_pos_to_tile_placed = dict(place_tiles_state.pos_to_tile_placed)
+                    new_pos_to_tile_placed[place_pos] = placing
+
+                    new_place_tiles_state = PlaceTilesState(
+                        pos_to_tile_placed=new_pos_to_tile_placed,
+                        start_pos=place_tiles_state.start_pos,
+                        word=current_word,
+                        tiles_left=new_tiles_left,
+                        before_begin_pos=new_before_begin_pos,
+                        after_end_pos=place_tiles_state.after_end_pos,
+                    )
+
+                    # Recursively get all vertical moves with this tile-placing.
+                    result.extend(
+                        self._rec_get_all_vertical_moves(
+                            state=state,
+                            playable_letter_info=playable_letter_info,
+                            place_tiles_state=new_place_tiles_state,
+                        )
+                    )
+
+        return result
+
+    # Return all moves that start at the given already-played position and go out along the vertical axis.
+    def _get_all_vertical_straight_moves(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        pos: BoardPosition,
+    ) -> list[PlaceTilesMove]:
+        # result = list[PlaceTilesMove]()
+
+        board = state.board
+        current_word = list[str]()
+        # TODO deal with the case where we are given an empty tile.
+        current_word.append(board.get_letter_at(pos))  # type: ignore
+
+        # Add the already-existing suffix, and determine the position after the end of the current word (or letter).
+        x, y = pos
+        while True:
+            y += 1
+            letter = board.get_letter_at((x, y))
+            if letter is None:
+                break
+            current_word.append(letter)
+        end_y = y
+
+        # Add the already-existing prefix, and determine the position before the beginning of the current word (or letter).
+        x, y = pos
+        while True:
+            y -= 1
+            letter = board.get_letter_at((x, y))
+            if letter is None:
+                break
+            current_word = [letter] + current_word  # TODO Make this faster.
+        begin_y = y
+
+        # The state for the recursive algorithm.
+        place_tiles_state = PlaceTilesState(
+            pos_to_tile_placed=dict(),
+            start_pos=pos,
+            word="".join(current_word),
+            tiles_left=state.player_to_state[state.current_player].tiles,
+            before_begin_pos=(x, begin_y),
+            after_end_pos=(x, end_y),
+        )
+
+        # Return all of the vertical moves from here using the recursive algorithm.
+        return self._rec_get_all_vertical_moves(
+            state=state,
+            playable_letter_info=playable_letter_info,
+            place_tiles_state=place_tiles_state,
+        )
+
+
+    # Return all moves that start at the given already-played position and go out along the horizontal axis.
+    def _get_all_horizontal_straight_moves(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        pos: BoardPosition,
+    ) -> list[PlaceTilesMove]:
+        result = list[PlaceTilesMove]()
+
+        return result
+
+    # Return all moves that start at the given already-played position and go out along one axis.
+    def _get_all_straight_moves(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        pos: BoardPosition,
+    ) -> list[PlaceTilesMove]:
+        result = list[PlaceTilesMove]()
+
+        result.extend(
+            self._get_all_vertical_straight_moves(
+                state=state, playable_letter_info=playable_letter_info, pos=pos
+            )
+        )
+        result.extend(
+            self._get_all_horizontal_straight_moves(
+                state=state, playable_letter_info=playable_letter_info, pos=pos
+            )
+        )
+
+        return result
+
+    # Return all moves that start at the given already-played position, go out one square in one axis,
+    # and then go out along the other axis.
+    def _get_all_curve_moves(
+        self,
+        state: GameState,
+        playable_letter_info: PlayableLetterInfo,
+        pos: BoardPosition,
+    ) -> list[PlaceTilesMove]:
+        result = list[PlaceTilesMove]()
+
+        return result
+
+    def get_all_place_tiles_moves(self, state: GameState) -> list[PlaceTilesMove]:
+        result = list[PlaceTilesMove]()
+
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board, words=self.words, infix_info=self.infix_data
+        )
+
+        board = state.board
+        for pos in board.position_to_tile:
+            result.extend(
+                self._get_all_straight_moves(
+                    state=state, playable_letter_info=playable_letter_info, pos=pos
+                )
+            )
+            result.extend(
+                self._get_all_curve_moves(
+                    state=state, playable_letter_info=playable_letter_info, pos=pos
+                )
+            )
+
+        return result

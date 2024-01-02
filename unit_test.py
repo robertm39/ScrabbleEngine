@@ -1255,48 +1255,51 @@ class MoveGenerationTest(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
 
-    def test_trie(self):
-        trie = Trie()
-        self.assertNotIn("", trie)
-        trie.add("")
-        self.assertIn("", trie)
-        trie.add("CAT")
-        self.assertIn("CAT", trie)
-        self.assertNotIn("CA", trie)
-        self.assertNotIn("C", trie)
+    # def test_trie(self):
+    #     trie = Trie()
+    #     self.assertNotIn("", trie)
+    #     trie.add("")
+    #     self.assertIn("", trie)
+    #     trie.add("CAT")
+    #     self.assertIn("CAT", trie)
+    #     self.assertNotIn("CA", trie)
+    #     self.assertNotIn("C", trie)
 
-        exp_tree = {None: dict(), "C": {"A": {"T": {None: dict()}}}}
-        self.assertDictEqual(trie.tree, exp_tree)
+    #     exp_tree = {None: dict(), "C": {"A": {"T": {None: dict()}}}}
+    #     self.assertDictEqual(trie.tree, exp_tree)
 
-        trie.add("CATS")
-        self.assertIn("CATS", trie)
-        exp_tree = {
-            None: dict(),
-            "C": {"A": {"T": {None: dict(), "S": {None: dict()}}}},
-        }
-        self.assertDictEqual(trie.tree, exp_tree)
+    #     trie.add("CATS")
+    #     self.assertIn("CATS", trie)
+    #     exp_tree = {
+    #         None: dict(),
+    #         "C": {"A": {"T": {None: dict(), "S": {None: dict()}}}},
+    #     }
+    #     self.assertDictEqual(trie.tree, exp_tree)
 
-        trie.add("CARE")
-        self.assertIn("CARE", trie)
-        exp_tree = {
-            None: dict(),
-            "C": {
-                "A": {
-                    "T": {None: dict(), "S": {None: dict()}},
-                    "R": {"E": {None: dict()}},
-                }
-            },
-        }
-        self.assertDictEqual(trie.tree, exp_tree)
+    #     trie.add("CARE")
+    #     self.assertIn("CARE", trie)
+    #     exp_tree = {
+    #         None: dict(),
+    #         "C": {
+    #             "A": {
+    #                 "T": {None: dict(), "S": {None: dict()}},
+    #                 "R": {"E": {None: dict()}},
+    #             }
+    #         },
+    #     }
+    #     self.assertDictEqual(trie.tree, exp_tree)
 
-    def test_prefix_trie_1(self):
-        p_trie = PrefixTrie()
-        p_trie.add("CARE")
-        self.assertIn(".CARE", p_trie.trie)
-        self.assertIn("C.ARE", p_trie.trie)
-        self.assertIn("AC.RE", p_trie.trie)
-        self.assertIn("RAC.E", p_trie.trie)
-        self.assertIn("ERAC", p_trie.trie)
+    # def test_prefix_trie_1(self):
+    #     p_trie = PrefixTrie()
+    #     p_trie.add("CARE")
+    #     self.assertIn(".CARE", p_trie.trie)
+    #     self.assertIn("C.ARE", p_trie.trie)
+    #     self.assertIn("AC.RE", p_trie.trie)
+    #     self.assertIn("RAC.E", p_trie.trie)
+    #     self.assertIn("ERAC", p_trie.trie)
+        
+    def test_vertical_moves_down_1(self):
+        pass
 
 
 if __name__ == "__main__":  #
