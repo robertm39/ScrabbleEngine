@@ -1753,6 +1753,370 @@ class MoveGenerationTest(unittest.TestCase):
         ]
         self.assertCountEqual(moves, exp_moves)
 
+    def test_get_all_horizontal_straight_moves_1(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a single B.
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=b)}),
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=b)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+        
+    def test_get_all_horizontal_straight_moves_2(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a B and an A.
+        a = LetterTile("A", points=1)
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [a, b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            #
+            # BA
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=b)}),
+            #
+            # AB
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=b)}),
+            #
+            # AA
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=a)}),
+            #
+            # AA
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=a)}),
+            #
+            # BAA
+            PlaceTilesMove(
+                position_to_placing={
+                    (5, 7): LetterTilePlacing(tile=b),
+                    (6, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # BAA
+            PlaceTilesMove(
+                position_to_placing={
+                    (6, 7): LetterTilePlacing(tile=b),
+                    (8, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # ABA
+            PlaceTilesMove(
+                position_to_placing={
+                    (5, 7): LetterTilePlacing(tile=a),
+                    (6, 7): LetterTilePlacing(tile=b),
+                }
+            ),
+            #
+            # ABA
+            PlaceTilesMove(
+                position_to_placing={
+                    (8, 7): LetterTilePlacing(tile=b),
+                    (9, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_3(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[6, 6] = LetterTile("B", points=1)
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a single B.
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=b)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_4(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[6, 6] = LetterTile("B", points=1)
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a single A.
+        a = LetterTile("A", points=1)
+        state.player_to_state[self.p0].tiles = [a]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=a)}),
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=a)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_5(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[6, 6] = LetterTile("B", points=1)
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player an A and a B.
+        a = LetterTile("A", points=1)
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [a, b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            #
+            # BA, AA
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=a)}),
+            #
+            # AA
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=a)}),
+            #
+            # AB
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=b)}),
+            # BAA, BA
+            PlaceTilesMove(
+                position_to_placing={
+                    (5, 7): LetterTilePlacing(tile=b),
+                    (6, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # ABA
+            PlaceTilesMove(
+                position_to_placing={
+                    (8, 7): LetterTilePlacing(tile=b),
+                    (9, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_6(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+        state.board.position_to_tile[8, 6] = LetterTile("B", points=1)
+
+        # Give the player a single B.
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=b)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_7(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+        state.board.position_to_tile[8, 6] = LetterTile("B", points=1)
+
+        # Give the player an A and a B.
+        a = LetterTile("A", points=1)
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [a, b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            # BA
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=b)}),
+            #
+            # AA
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=a)}),
+            #
+            # AA, BA
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=a)}),
+            #
+            # BAA, BA
+            PlaceTilesMove(
+                position_to_placing={
+                    (6, 7): LetterTilePlacing(tile=b),
+                    (8, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # ABA
+            PlaceTilesMove(
+                position_to_placing={
+                    (5, 7): LetterTilePlacing(tile=a),
+                    (6, 7): LetterTilePlacing(tile=b),
+                }
+            ),
+            #
+            # BAA
+            PlaceTilesMove(
+                position_to_placing={
+                    (5, 7): LetterTilePlacing(tile=b),
+                    (6, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_8(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[6, 7] = LetterTile("B", points=1)
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a single A.
+        a = LetterTile("A", points=1)
+        state.player_to_state[self.p0].tiles = [a]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(5, 7): LetterTilePlacing(tile=a)}),
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=a)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_9(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+        state.board.position_to_tile[8, 7] = LetterTile("B", points=1)
+
+        # Give the player a single A.
+        a = LetterTile("A", points=1)
+        state.player_to_state[self.p0].tiles = [a]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(9, 7): LetterTilePlacing(tile=a)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_10(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[0, 7] = LetterTile("A", points=1)
+
+        # Give the player a single B.
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(0, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(1, 7): LetterTilePlacing(tile=b)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_horizontal_straight_moves_11(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[14, 7] = LetterTile("A", points=1)
+
+        # Give the player a single B.
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(14, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(13, 7): LetterTilePlacing(tile=b)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
 
 if __name__ == "__main__":  #
     unittest.main()
