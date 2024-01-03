@@ -1753,6 +1753,46 @@ class MoveGenerationTest(unittest.TestCase):
         ]
         self.assertCountEqual(moves, exp_moves)
 
+    def test_get_all_vertical_straight_moves_12(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a single blank tile.
+        blank = BlankTile(points=0)
+        state.player_to_state[self.p0].tiles = [blank]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_vertical_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(
+                position_to_placing={(7, 6): BlankTilePlacing(tile=blank, letter="A")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(7, 6): BlankTilePlacing(tile=blank, letter="B")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(7, 6): BlankTilePlacing(tile=blank, letter="T")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(7, 8): BlankTilePlacing(tile=blank, letter="A")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(7, 8): BlankTilePlacing(tile=blank, letter="B")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(7, 8): BlankTilePlacing(tile=blank, letter="T")}
+            ),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
     def test_get_all_horizontal_straight_moves_1(self):
         state = self.empty_state.copy()
         state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
@@ -1777,7 +1817,6 @@ class MoveGenerationTest(unittest.TestCase):
         ]
         self.assertCountEqual(moves, exp_moves)
 
-        
     def test_get_all_horizontal_straight_moves_2(self):
         state = self.empty_state.copy()
         state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
@@ -2117,6 +2156,169 @@ class MoveGenerationTest(unittest.TestCase):
         ]
         self.assertCountEqual(moves, exp_moves)
 
+    def test_get_all_horizontal_straight_moves_12(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
 
-if __name__ == "__main__":  #
+        # Give the player a single blank tile.
+        blank = BlankTile(points=0)
+        state.player_to_state[self.p0].tiles = [blank]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_horizontal_straight_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(
+                position_to_placing={(6, 7): BlankTilePlacing(tile=blank, letter="A")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(6, 7): BlankTilePlacing(tile=blank, letter="B")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(6, 7): BlankTilePlacing(tile=blank, letter="T")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(8, 7): BlankTilePlacing(tile=blank, letter="A")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(8, 7): BlankTilePlacing(tile=blank, letter="B")}
+            ),
+            PlaceTilesMove(
+                position_to_placing={(8, 7): BlankTilePlacing(tile=blank, letter="T")}
+            ),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_vertical_offset_moves_1(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a single B.
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_vertical_offset_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=b)}),
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=b)}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_vertical_offset_moves_2(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player an A and a B.
+        a = LetterTile("A", points=1)
+        b = LetterTile("B", points=1)
+        state.player_to_state[self.p0].tiles = [a, b]
+
+        # Get the playable letter info.
+        playable_letter_info = PlayableLetterInfo(
+            board=state.board,
+            words=state.config.playable_words,
+            infix_info=self.moves_finder.infix_data,
+        )
+        moves = self.moves_finder._get_all_vertical_offset_moves(
+            state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
+        )
+
+        exp_moves = [
+            #
+            # AA
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=a)}),
+            #
+            # AA
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=a)}),
+            #
+            # BA
+            PlaceTilesMove(position_to_placing={(6, 7): LetterTilePlacing(tile=b)}),
+            #
+            # AB
+            PlaceTilesMove(position_to_placing={(8, 7): LetterTilePlacing(tile=b)}),
+            #
+            # BA, AA
+            PlaceTilesMove(
+                position_to_placing={
+                    (6, 6): LetterTilePlacing(tile=b),
+                    (6, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # BA, AA
+            PlaceTilesMove(
+                position_to_placing={
+                    (8, 6): LetterTilePlacing(tile=b),
+                    (8, 7): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # BA, BA
+            PlaceTilesMove(
+                position_to_placing={
+                    (6, 7): LetterTilePlacing(tile=b),
+                    (6, 8): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # AB, BA
+            PlaceTilesMove(
+                position_to_placing={
+                    (8, 7): LetterTilePlacing(tile=b),
+                    (8, 8): LetterTilePlacing(tile=a),
+                }
+            ),
+            #
+            # AB, BA
+            PlaceTilesMove(
+                position_to_placing={
+                    (6, 6): LetterTilePlacing(tile=a),
+                    (6, 7): LetterTilePlacing(tile=b),
+                }
+            ),
+            #
+            # AB, AA
+            PlaceTilesMove(
+                position_to_placing={
+                    (6, 7): LetterTilePlacing(tile=a),
+                    (6, 8): LetterTilePlacing(tile=b),
+                }
+            ),
+            #
+            # AB, AB
+            PlaceTilesMove(
+                position_to_placing={
+                    (8, 6): LetterTilePlacing(tile=a),
+                    (8, 7): LetterTilePlacing(tile=b),
+                }
+            ),
+            #
+            # AA, AB
+            PlaceTilesMove(
+                position_to_placing={
+                    (8, 7): LetterTilePlacing(tile=a),
+                    (8, 8): LetterTilePlacing(tile=b),
+                }
+            ),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+
+if __name__ == "__main__":
     unittest.main()

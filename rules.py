@@ -15,11 +15,17 @@ class LetterTilePlacing:
     def letter(self) -> LETTER:
         return self.tile.letter
 
+    def __hash__(self) -> int:
+        return hash(self.tile)
+
 
 @dataclass
 class BlankTilePlacing:
     tile: BlankTile
     letter: LETTER
+
+    def __hash__(self) -> int:
+        return hash(self.tile) ^ hash(self.letter)
 
 
 # A placing of any tile.
@@ -81,6 +87,9 @@ class PlaceTilesMove(Move):
         self, position_to_placing: Mapping[BoardPosition, TilePlacing]
     ) -> None:
         self.position_to_placing = frozendict(position_to_placing)
+
+    def __hash__(self) -> int:
+        return hash(self.position_to_placing)
 
     # Return all of the words made by this move.
     def get_words_made(self, board: Board) -> list[WordOnBoard]:

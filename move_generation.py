@@ -374,19 +374,22 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         place_tiles_state: PlaceTilesState,
-    ) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
-        # See if the current state already makes a word.
-        # If it does, and if it at least one tile has been placed, count that.
-        min_tiles_for_move = 2 if place_tiles_state.ignore_one_tile_moves else 1
-        if (place_tiles_state.word in self.words) and len(
-            place_tiles_state.pos_to_tile_placed
-        ) >= min_tiles_for_move:
+        # # See if the current state already makes a word.
+        # # If it does, and if it at least one tile has been placed, count that.
+        # min_tiles_for_move = 2 if place_tiles_state.ignore_one_tile_moves else 1
+        # if (place_tiles_state.word in self.words or len(place_tiles_state.word)==1) and len(
+        #     place_tiles_state.pos_to_tile_placed
+        # ) >= min_tiles_for_move:
+        if (
+            place_tiles_state.word in self.words or len(place_tiles_state.word) == 1
+        ) and len(place_tiles_state.pos_to_tile_placed) > 0:
             move = PlaceTilesMove(
                 position_to_placing=place_tiles_state.pos_to_tile_placed
             )
-            result.append(move)
+            result.add(move)
 
         # Check if there's any room to place tiles. If there isn't, we can't make any more moves.
         place_pos = place_tiles_state.after_end_pos
@@ -444,7 +447,7 @@ class PlaceTilesMoveFinder:
                     before_begin_pos=place_tiles_state.before_begin_pos,
                     after_end_pos=new_after_end_pos,
                 )
-                result.extend(
+                result.update(
                     self._rec_get_all_vertical_moves_down(
                         state=state,
                         playable_letter_info=playable_letter_info,
@@ -461,11 +464,11 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         place_tiles_state: PlaceTilesState,
-    ) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
         # Get all moves going down from here.
-        result.extend(
+        result.update(
             self._rec_get_all_vertical_moves_down(
                 state=state,
                 playable_letter_info=playable_letter_info,
@@ -532,7 +535,7 @@ class PlaceTilesMoveFinder:
                     )
 
                     # Recursively get all vertical moves with this tile-placing.
-                    result.extend(
+                    result.update(
                         self._rec_get_all_vertical_moves(
                             state=state,
                             playable_letter_info=playable_letter_info,
@@ -548,11 +551,19 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
-    ) -> list[PlaceTilesMove]:
+        placing_at_pos: TilePlacing | None = None,
+    ) -> set[PlaceTilesMove]:
         board = state.board
         current_word = list[str]()
+
         # TODO deal with the case where we are given an empty tile.
-        current_word.append(board.get_letter_at(pos))  # type: ignore
+        if placing_at_pos is None:
+            current_word.append(board.get_letter_at(pos))  # type: ignore
+            tiles_left = state.player_to_state[state.current_player].tiles
+        else:
+            current_word.append(placing_at_pos.letter)
+            tiles_left = list(state.player_to_state[state.current_player].tiles)
+            tiles_left.remove(placing_at_pos.tile)
 
         # Add the already-existing suffix, and determine the position after the end of the current word (or letter).
         x, y = pos
@@ -575,11 +586,16 @@ class PlaceTilesMoveFinder:
         begin_y = y
 
         # The state for the recursive algorithm.
+        pos_to_tile_placed = dict()
+        if placing_at_pos is not None:
+            pos_to_tile_placed[pos] = placing_at_pos
+
         place_tiles_state = PlaceTilesState(
-            pos_to_tile_placed=dict(),
+            pos_to_tile_placed=pos_to_tile_placed,
             start_pos=pos,
             word="".join(current_word),
-            tiles_left=state.player_to_state[state.current_player].tiles,
+            # tiles_left=state.player_to_state[state.current_player].tiles,
+            tiles_left=tiles_left,
             before_begin_pos=(x, begin_y),
             after_end_pos=(x, end_y),
         )
@@ -598,18 +614,18 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         place_tiles_state: PlaceTilesState,
-    ) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
         # See if the current state already makes a word.
         # If it does, and if it at least one tile has been placed, count that.
-        if (place_tiles_state.word in self.words) and len(
-            place_tiles_state.pos_to_tile_placed
-        ) > 0:
+        if (
+            place_tiles_state.word in self.words or len(place_tiles_state.word) == 1
+        ) and len(place_tiles_state.pos_to_tile_placed) > 0:
             move = PlaceTilesMove(
                 position_to_placing=place_tiles_state.pos_to_tile_placed
             )
-            result.append(move)
+            result.add(move)
 
         # Check if there's any room to place tiles. If there isn't, we can't make any more moves.
         place_pos = place_tiles_state.after_end_pos
@@ -668,7 +684,7 @@ class PlaceTilesMoveFinder:
                     before_begin_pos=place_tiles_state.before_begin_pos,
                     after_end_pos=new_after_end_pos,
                 )
-                result.extend(
+                result.update(
                     self._rec_get_all_horizontal_moves_right(
                         state=state,
                         playable_letter_info=playable_letter_info,
@@ -685,11 +701,11 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         place_tiles_state: PlaceTilesState,
-    ) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
         # Get all moves going right from here.
-        result.extend(
+        result.update(
             self._rec_get_all_horizontal_moves_right(
                 state=state,
                 playable_letter_info=playable_letter_info,
@@ -756,7 +772,7 @@ class PlaceTilesMoveFinder:
                     )
 
                     # Recursively get all horizontal moves with this tile-placing.
-                    result.extend(
+                    result.update(
                         self._rec_get_all_horizontal_moves(
                             state=state,
                             playable_letter_info=playable_letter_info,
@@ -772,7 +788,7 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
-    ) -> list[PlaceTilesMove]:
+    ) -> set[PlaceTilesMove]:
         board = state.board
         current_word = list[str]()
         # TODO deal with the case where we are given an empty tile.
@@ -821,15 +837,15 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
-    ) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
-        result.extend(
+        result.update(
             self._get_all_vertical_straight_moves(
                 state=state, playable_letter_info=playable_letter_info, pos=pos
             )
         )
-        result.extend(
+        result.update(
             self._get_all_horizontal_straight_moves(
                 state=state, playable_letter_info=playable_letter_info, pos=pos
             )
@@ -843,12 +859,9 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
-    ) -> list[PlaceTilesMove]:
-        # TODO eliminate redundant results.
-
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
         x, y = pos
-        board = state.board
 
         # # Determine the current horizontal word at this position.
         # horizontal_word = cast(str, board.get_letter_at(pos))
@@ -867,22 +880,30 @@ class PlaceTilesMoveFinder:
         #         break
         #     horizontal_word = l + horizontal_word
 
-        # If the spot to the right is open, try to make vertical moves there.
-        spot_to_right = x + 1, y
-        if state.board.get_tile_at(spot_to_right) is None:
+        for x_diff in (-1, 1):
+            # If the spot to the side is open, try to make vertical moves there.
+            spot_to_side = x + x_diff, y
+            if state.board.get_tile_at(spot_to_side) is not None:
+                continue
             # TODO Maybe see what the vertical prefix and suffix for the word would be
             # in order to narrow down what letters we'll try to place.
 
             # See what tiles we can place there.
             # ok_letters = self.infix_data.get_all_suffixes(horizontal_word)
             unique_tiles = set(state.player_to_state[state.current_player].tiles)
-            ok_side_letters = playable_letter_info.pos_to_vertical_letters[
-                spot_to_right
-            ]
+            ok_side_letters = playable_letter_info.pos_to_vertical_letters[spot_to_side]
             for tile in unique_tiles:
                 placings = get_all_possible_placings(ok_side_letters=ok_side_letters, ok_letters=ALPHABET, tile=tile)  # type: ignore
-                # TODO For each placing, see all vertical words you can make with it.
-                
+                # For each placing, see all vertical words you can make with it.
+                for placing in placings:
+                    result.update(
+                        self._get_all_vertical_straight_moves(
+                            state=state,
+                            playable_letter_info=playable_letter_info,
+                            pos=spot_to_side,
+                            placing_at_pos=placing,
+                        )
+                    )
 
         return result
 
@@ -892,8 +913,8 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
-    ) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
         return result
 
@@ -904,15 +925,15 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
-    ) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    ) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
-        result.extend(
+        result.update(
             self._get_all_vertical_offset_moves(
                 state=state, playable_letter_info=playable_letter_info, pos=pos
             )
         )
-        result.extend(
+        result.update(
             self._get_all_horizontal_offset_moves(
                 state=state, playable_letter_info=playable_letter_info, pos=pos
             )
@@ -920,8 +941,8 @@ class PlaceTilesMoveFinder:
 
         return result
 
-    def get_all_place_tiles_moves(self, state: GameState) -> list[PlaceTilesMove]:
-        result = list[PlaceTilesMove]()
+    def get_all_place_tiles_moves(self, state: GameState) -> set[PlaceTilesMove]:
+        result = set[PlaceTilesMove]()
 
         playable_letter_info = PlayableLetterInfo(
             board=state.board, words=self.words, infix_info=self.infix_data
@@ -929,12 +950,12 @@ class PlaceTilesMoveFinder:
 
         board = state.board
         for pos in board.position_to_tile:
-            result.extend(
+            result.update(
                 self._get_all_straight_moves(
                     state=state, playable_letter_info=playable_letter_info, pos=pos
                 )
             )
-            result.extend(
+            result.update(
                 self._get_all_offset_moves(
                     state=state, playable_letter_info=playable_letter_info, pos=pos
                 )
