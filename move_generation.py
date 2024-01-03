@@ -931,13 +931,15 @@ class PlaceTilesMoveFinder:
             spot_to_side = x + x_diff, y
             if state.board.get_tile_at(spot_to_side) is not None:
                 continue
+            if not state.board.contains_position(spot_to_side):
+                continue
             # TODO Maybe see what the vertical prefix and suffix for the word would be
             # in order to narrow down what letters we'll try to place.
 
             # See what tiles we can place there.
             # ok_letters = self.infix_data.get_all_suffixes(horizontal_word)
             unique_tiles = set(state.player_to_state[state.current_player].tiles)
-            ok_side_letters = playable_letter_info.pos_to_vertical_letters[spot_to_side]
+            ok_side_letters = playable_letter_info.pos_to_vertical_letters.get(spot_to_side, tuple[LETTER, ...]())
             for tile in unique_tiles:
                 placings = get_all_possible_placings(ok_side_letters=ok_side_letters, ok_letters=ALPHABET, tile=tile)  # type: ignore
                 # For each placing, see all vertical words you can make with it.
@@ -968,15 +970,17 @@ class PlaceTilesMoveFinder:
             spot_to_side = x, y + y_diff
             if state.board.get_tile_at(spot_to_side) is not None:
                 continue
+            if not state.board.contains_position(spot_to_side):
+                continue
             # TODO Maybe see what the horizontal prefix and suffix for the word would be
             # in order to narrow down what letters we'll try to place.
 
             # See what tiles we can place there.
             # ok_letters = self.infix_data.get_all_suffixes(horizontal_word)
             unique_tiles = set(state.player_to_state[state.current_player].tiles)
-            ok_side_letters = playable_letter_info.pos_to_horizontal_letters[
-                spot_to_side
-            ]
+            ok_side_letters = playable_letter_info.pos_to_horizontal_letters.get(
+                spot_to_side, tuple[LETTER, ...]()
+            )
             for tile in unique_tiles:
                 placings = get_all_possible_placings(ok_side_letters=ok_side_letters, ok_letters=ALPHABET, tile=tile)  # type: ignore
                 # For each placing, see all horizontal words you can make with it.
