@@ -377,12 +377,8 @@ class PlaceTilesMoveFinder:
     ) -> set[PlaceTilesMove]:
         result = set[PlaceTilesMove]()
 
-        # # See if the current state already makes a word.
-        # # If it does, and if it at least one tile has been placed, count that.
-        # min_tiles_for_move = 2 if place_tiles_state.ignore_one_tile_moves else 1
-        # if (place_tiles_state.word in self.words or len(place_tiles_state.word)==1) and len(
-        #     place_tiles_state.pos_to_tile_placed
-        # ) >= min_tiles_for_move:
+        # See if the current state already makes a word.
+        # If it does, and if it at least one tile has been placed, count that.
         if (
             place_tiles_state.word in self.words or len(place_tiles_state.word) == 1
         ) and len(place_tiles_state.pos_to_tile_placed) > 0:
@@ -788,11 +784,20 @@ class PlaceTilesMoveFinder:
         state: GameState,
         playable_letter_info: PlayableLetterInfo,
         pos: BoardPosition,
+        placing_at_pos: TilePlacing | None = None,
     ) -> set[PlaceTilesMove]:
+        
         board = state.board
         current_word = list[str]()
+
         # TODO deal with the case where we are given an empty tile.
-        current_word.append(board.get_letter_at(pos))  # type: ignore
+        if placing_at_pos is None:
+            current_word.append(board.get_letter_at(pos))  # type: ignore
+            tiles_left = state.player_to_state[state.current_player].tiles
+        else:
+            current_word.append(placing_at_pos.letter)
+            tiles_left = list(state.player_to_state[state.current_player].tiles)
+            tiles_left.remove(placing_at_pos.tile)
 
         # Add the already-existing suffix, and determine the position after the end of the current word (or letter).
         x, y = pos
@@ -815,11 +820,16 @@ class PlaceTilesMoveFinder:
         begin_x = x
 
         # The state for the recursive algorithm.
+        pos_to_tile_placed = dict()
+        if placing_at_pos is not None:
+            pos_to_tile_placed[pos] = placing_at_pos
+
         place_tiles_state = PlaceTilesState(
-            pos_to_tile_placed=dict(),
+            pos_to_tile_placed=pos_to_tile_placed,
             start_pos=pos,
             word="".join(current_word),
-            tiles_left=state.player_to_state[state.current_player].tiles,
+            # tiles_left=state.player_to_state[state.current_player].tiles,
+            tiles_left=tiles_left,
             before_begin_pos=(begin_x, y),
             after_end_pos=(end_x, y),
         )
@@ -830,6 +840,47 @@ class PlaceTilesMoveFinder:
             playable_letter_info=playable_letter_info,
             place_tiles_state=place_tiles_state,
         )
+        # board = state.board
+        # current_word = list[str]()
+        # # TODO deal with the case where we are given an empty tile.
+        # current_word.append(board.get_letter_at(pos))  # type: ignore
+
+        # # Add the already-existing suffix, and determine the position after the end of the current word (or letter).
+        # x, y = pos
+        # while True:
+        #     x += 1
+        #     letter = board.get_letter_at((x, y))
+        #     if letter is None:
+        #         break
+        #     current_word.append(letter)
+        # end_x = x
+
+        # # Add the already-existing prefix, and determine the position before the beginning of the current word (or letter).
+        # x, y = pos
+        # while True:
+        #     x -= 1
+        #     letter = board.get_letter_at((x, y))
+        #     if letter is None:
+        #         break
+        #     current_word = [letter] + current_word  # TODO Make this faster.
+        # begin_x = x
+
+        # # The state for the recursive algorithm.
+        # place_tiles_state = PlaceTilesState(
+        #     pos_to_tile_placed=dict(),
+        #     start_pos=pos,
+        #     word="".join(current_word),
+        #     tiles_left=state.player_to_state[state.current_player].tiles,
+        #     before_begin_pos=(begin_x, y),
+        #     after_end_pos=(end_x, y),
+        # )
+
+        # # Return all of the horizontal moves from here using the recursive algorithm.
+        # return self._rec_get_all_horizontal_moves(
+        #     state=state,
+        #     playable_letter_info=playable_letter_info,
+        #     place_tiles_state=place_tiles_state,
+        # )
 
     # Return all moves that start at the given already-played position and go out along one axis.
     def _get_all_straight_moves(
@@ -862,23 +913,6 @@ class PlaceTilesMoveFinder:
     ) -> set[PlaceTilesMove]:
         result = set[PlaceTilesMove]()
         x, y = pos
-
-        # # Determine the current horizontal word at this position.
-        # horizontal_word = cast(str, board.get_letter_at(pos))
-        # c_x = x
-        # while True:
-        #     c_x += 1
-        #     l = board.get_letter_at((c_x, y))
-        #     if l is None:
-        #         break
-        #     horizontal_word = horizontal_word + l
-        # c_x = x
-        # while True:
-        #     c_x -= 1
-        #     l = board.get_letter_at((c_x, y))
-        #     if l is None:
-        #         break
-        #     horizontal_word = l + horizontal_word
 
         for x_diff in (-1, 1):
             # If the spot to the side is open, try to make vertical moves there.
@@ -915,6 +949,32 @@ class PlaceTilesMoveFinder:
         pos: BoardPosition,
     ) -> set[PlaceTilesMove]:
         result = set[PlaceTilesMove]()
+        x, y = pos
+
+        for y_diff in (-1, 1):
+            # If the spot to the side is open, try to make horizontal moves there.
+            spot_to_side = x, y + y_diff
+            if state.board.get_tile_at(spot_to_side) is not None:
+                continue
+            # TODO Maybe see what the horizontal prefix and suffix for the word would be
+            # in order to narrow down what letters we'll try to place.
+
+            # See what tiles we can place there.
+            # ok_letters = self.infix_data.get_all_suffixes(horizontal_word)
+            unique_tiles = set(state.player_to_state[state.current_player].tiles)
+            ok_side_letters = playable_letter_info.pos_to_horizontal_letters[spot_to_side]
+            for tile in unique_tiles:
+                placings = get_all_possible_placings(ok_side_letters=ok_side_letters, ok_letters=ALPHABET, tile=tile)  # type: ignore
+                # For each placing, see all horizontal words you can make with it.
+                for placing in placings:
+                    result.update(
+                        self._get_all_horizontal_straight_moves(
+                            state=state,
+                            playable_letter_info=playable_letter_info,
+                            pos=spot_to_side,
+                            placing_at_pos=placing,
+                        )
+                    )
 
         return result
 
