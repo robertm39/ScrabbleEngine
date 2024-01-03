@@ -2442,6 +2442,71 @@ class MoveGenerationTest(unittest.TestCase):
         ]
         self.assertCountEqual(moves, exp_moves)
 
+    def test_get_all_place_tiles_moves_1(self):
+        state = self.empty_state.copy()
+        state.board = get_board_from_strings(tile_string="  \n  ")
+
+        # Give the player a two A's.
+        a = LetterTile("A", points=1)
+        state.player_to_state[self.p0].tiles = [a, a]
+
+        moves = self.moves_finder.get_all_place_tiles_moves(state=state)
+
+        pl = LetterTilePlacing(tile=a)
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(0, 0): pl, (0, 1): pl}),
+            PlaceTilesMove(position_to_placing={(1, 0): pl, (1, 1): pl}),
+            PlaceTilesMove(position_to_placing={(0, 0): pl, (1, 0): pl}),
+            PlaceTilesMove(position_to_placing={(0, 1): pl, (1, 1): pl}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_place_tiles_moves_2(self):
+        state = self.empty_state.copy()
+        # state.board = get_board_from_strings(tile_string="  \n  ")
+
+        # Give the player a two A's.
+        a = LetterTile("A", points=1)
+        state.player_to_state[self.p0].tiles = [a, a]
+
+        moves = self.moves_finder.get_all_place_tiles_moves(state=state)
+
+        pl = LetterTilePlacing(tile=a)
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(7, 7): pl, (7, 8): pl}),
+            PlaceTilesMove(position_to_placing={(7, 7): pl, (7, 6): pl}),
+            PlaceTilesMove(position_to_placing={(7, 7): pl, (6, 7): pl}),
+            PlaceTilesMove(position_to_placing={(7, 7): pl, (8, 7): pl}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
+    def test_get_all_place_tiles_moves_3(self):
+        state = self.empty_state.copy()
+        state.board.position_to_tile[7, 7] = LetterTile("A", points=1)
+
+        # Give the player a two A's.
+        a = LetterTile("A", points=1)
+        state.player_to_state[self.p0].tiles = [a, a]
+
+        moves = self.moves_finder.get_all_place_tiles_moves(state=state)
+
+        pl = LetterTilePlacing(tile=a)
+        exp_moves = [
+            PlaceTilesMove(position_to_placing={(7, 8): pl}),
+            PlaceTilesMove(position_to_placing={(7, 6): pl}),
+            PlaceTilesMove(position_to_placing={(6, 7): pl}),
+            PlaceTilesMove(position_to_placing={(8, 7): pl}),
+            PlaceTilesMove(position_to_placing={(6, 6): pl, (6, 7): pl}),
+            PlaceTilesMove(position_to_placing={(6, 7): pl, (6, 8): pl}),
+            PlaceTilesMove(position_to_placing={(8, 6): pl, (8, 7): pl}),
+            PlaceTilesMove(position_to_placing={(8, 7): pl, (8, 8): pl}),
+            PlaceTilesMove(position_to_placing={(6, 6): pl, (7, 6): pl}),
+            PlaceTilesMove(position_to_placing={(7, 6): pl, (8, 6): pl}),
+            PlaceTilesMove(position_to_placing={(6, 8): pl, (7, 8): pl}),
+            PlaceTilesMove(position_to_placing={(7, 8): pl, (8, 8): pl}),
+        ]
+        self.assertCountEqual(moves, exp_moves)
+
 
 if __name__ == "__main__":
     unittest.main()
