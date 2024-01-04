@@ -14,7 +14,7 @@ def do_random_init(state: GameState) -> None:
 
     # Randomly draw tiles for each player.
     for player_state in state.player_to_state.values():
-        draw_tiles(
+        draw_tiles_for_player(
             player=player_state, bag=state.bag, num_tiles=state.config.max_tiles_in_hand
         )
 
@@ -24,15 +24,7 @@ def do_random_init(state: GameState) -> None:
 def run_game(
     state: GameState, player_to_strategy: Mapping[Player, MoveGetter], random_init=True
 ) -> Generator[tuple[Move | None, GameState], None, None]:
-    # # Randomly determine the starting player.
-    # starting_player = random.choice(state.player_order)
-    # state.current_player = starting_player
-
-    # # Randomly draw tiles for each player.
-    # for player_state in state.player_to_state.values():
-    #     draw_tiles(
-    #         player=player_state, bag=state.bag, num_tiles=state.config.max_tiles_in_hand
-    #     )
+    # Randomly draw tiles and determine the starting player, if requested.
     if random_init:
         do_random_init(state=state)
 

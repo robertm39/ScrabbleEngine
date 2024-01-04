@@ -15,46 +15,11 @@ import copy
 from dataclasses import dataclass
 from frozendict import frozendict
 
-ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+from constants import *
+import infix_data
 
-# A playable letter.
-LETTER = Literal[
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "O",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
-]
-
-
-class Direction(Enum):
-    HORIZONTAL = "HORIZONTAL"
-    VERTICAL = "VERTICAL"
-
-
-# A playable word.
-WORD = str
+# from utils import ALPHABET
+# ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
 # Any tile.
@@ -156,6 +121,7 @@ class GameConfig:
         bonus_points: int,
         scoreless_turns_to_end_game: int,
         config_name: str = "",
+        infix_data: infix_data.InfixData | None=None,
     ):
         self.playable_words = frozenset(playable_words)
         self.min_tiles_for_turn_in = min_tiles_for_turn_in
@@ -164,6 +130,14 @@ class GameConfig:
         self.bingo_points = bonus_points
         self.scoreless_turns_to_end_game = scoreless_turns_to_end_game
         self.config_name = config_name
+        # self._infix_data = infix_data.InfixData(words=self.playable_words)
+        self._infix_data = infix_data
+
+    @property
+    def infix_data(self) -> infix_data.InfixData:
+        if self._infix_data is None:
+            self._infix_data = infix_data.InfixData(words=self.playable_words)
+        return self._infix_data
 
 
 # A player in the game.

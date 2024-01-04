@@ -33,14 +33,14 @@ class HighestScoringWordStrategy(MoveGetter):
         # print("")
 
         # print("New way:")
-        print("")
-        print("")
-        print("")
+        # print("")
+        # print("")
+        # print("")
         before = time.time()
         placement_moves = self.moves_finder.get_all_place_tiles_moves(state=state)  # type: ignore
         after = time.time()
-        print(f"Took {after-before:.2f} seconds.")
-        print(f"Found {len(placement_moves)} placement moves.")
+        # print(f"Took {after-before:.2f} seconds.")
+        # print(f"Found {len(placement_moves)} placement moves.")
 
         num_invalid_moves = 0
         for move in placement_moves:

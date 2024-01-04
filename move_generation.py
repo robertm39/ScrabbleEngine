@@ -218,11 +218,12 @@ def get_all_place_tiles_moves_naive(
 # Information about what letters can be played where. (This could be computed only on parts of the board that changed.)
 class PlayableLetterInfo:
     def __init__(
-        self, board: Board, words: Collection[WORD], infix_info: infix_data.InfixData
+        self, state: GameState#, words: Collection[WORD]
     ) -> None:
+        board = state.board
         self.board = board
-        self.words = frozenset(words)
-        self.infix_info = infix_info
+        self.words = frozenset(state.config.playable_words)
+        self.infix_info = state.config.infix_data
 
         pos_to_vertical_letters = dict[BoardPosition, tuple[LETTER, ...]]()
 
@@ -365,7 +366,7 @@ def get_all_possible_placings(
 class PlaceTilesMoveFinder:
     def __init__(self, words: Collection[WORD]) -> None:
         self.words = frozenset(words)
-        self.infix_data = infix_data.InfixData(words=self.words)
+        # self.infix_data = infix_data.InfixData(words=self.words)
 
     # Return all vertical moves, only going down.
     # Assumes that there is no tile directly above or below the column of already-placed tiles. TODO check for this.
@@ -403,7 +404,8 @@ class PlaceTilesMoveFinder:
         ok_letters = playable_letter_info.pos_to_vertical_letters.get(
             place_pos, tuple[LETTER, ...]()
         )
-        ok_suffixes = self.infix_data.get_all_suffixes(place_tiles_state.word)
+        # ok_suffixes = self.infix_data.get_all_suffixes(place_tiles_state.word)
+        ok_suffixes = state.config.infix_data.get_all_suffixes(place_tiles_state.word)
         unique_tiles = set(place_tiles_state.tiles_left)
         for tile in unique_tiles:
             # Get all of the possible tile-placings.
@@ -425,7 +427,8 @@ class PlaceTilesMoveFinder:
                     if letter_below is None:
                         # We're past all of the tiles at the top.
                         break
-                    ok_suffixes = self.infix_data.get_all_suffixes(current_word)
+                    # ok_suffixes = self.infix_data.get_all_suffixes(current_word)
+                    ok_suffixes = state.config.infix_data.get_all_suffixes(current_word)
                     if not letter_below in ok_suffixes:
                         placing_works = False
                         break
@@ -486,7 +489,8 @@ class PlaceTilesMoveFinder:
             ok_letters = playable_letter_info.pos_to_vertical_letters.get(
                 place_pos, tuple[LETTER, ...]()
             )
-            ok_prefixes = self.infix_data.get_all_prefixes(place_tiles_state.word)
+            # ok_prefixes = self.infix_data.get_all_prefixes(place_tiles_state.word)
+            ok_prefixes = state.config.infix_data.get_all_prefixes(place_tiles_state.word)
             for tile in unique_tiles:
                 # Get all of the possible tile-placings.
                 placings = get_all_possible_placings(
@@ -509,7 +513,8 @@ class PlaceTilesMoveFinder:
                         if letter_above is None:
                             # We're past all of the tiles at the top.
                             break
-                        ok_prefixes = self.infix_data.get_all_prefixes(current_word)
+                        # ok_prefixes = self.infix_data.get_all_prefixes(current_word)
+                        ok_prefixes = state.config.infix_data.get_all_prefixes(current_word)
                         if not letter_above in ok_prefixes:
                             placing_works = False
                             break
@@ -645,7 +650,8 @@ class PlaceTilesMoveFinder:
         ok_letters = playable_letter_info.pos_to_horizontal_letters.get(
             place_pos, tuple[LETTER, ...]()
         )
-        ok_suffixes = self.infix_data.get_all_suffixes(place_tiles_state.word)
+        # ok_suffixes = self.infix_data.get_all_suffixes(place_tiles_state.word)
+        ok_suffixes = state.config.infix_data.get_all_suffixes(place_tiles_state.word)
         unique_tiles = set(place_tiles_state.tiles_left)
         for tile in unique_tiles:
             # Get all of the possible tile-placings.
@@ -667,7 +673,8 @@ class PlaceTilesMoveFinder:
                     if letter_after is None:
                         # We're past all of the tiles at the top.
                         break
-                    ok_suffixes = self.infix_data.get_all_suffixes(current_word)
+                    # ok_suffixes = self.infix_data.get_all_suffixes(current_word)
+                    ok_suffixes = state.config.infix_data.get_all_suffixes(current_word)
                     if not letter_after in ok_suffixes:
                         placing_works = False
                         break
@@ -728,7 +735,8 @@ class PlaceTilesMoveFinder:
             ok_letters = playable_letter_info.pos_to_horizontal_letters.get(
                 place_pos, tuple[LETTER, ...]()
             )
-            ok_prefixes = self.infix_data.get_all_prefixes(place_tiles_state.word)
+            # ok_prefixes = self.infix_data.get_all_prefixes(place_tiles_state.word)
+            ok_prefixes = state.config.infix_data.get_all_prefixes(place_tiles_state.word)
             for tile in unique_tiles:
                 # Get all of the possible tile-placings.
                 placings = get_all_possible_placings(
@@ -751,7 +759,8 @@ class PlaceTilesMoveFinder:
                         if letter_before is None:
                             # We're past all of the tiles at the top.
                             break
-                        ok_prefixes = self.infix_data.get_all_prefixes(current_word)
+                        # ok_prefixes = self.infix_data.get_all_prefixes(current_word)
+                        ok_prefixes = state.config.infix_data.get_all_prefixes(current_word)
                         if not letter_before in ok_prefixes:
                             placing_works = False
                             break
@@ -1058,7 +1067,7 @@ class PlaceTilesMoveFinder:
         result = set[PlaceTilesMove]()
 
         playable_letter_info = PlayableLetterInfo(
-            board=state.board, words=self.words, infix_info=self.infix_data
+            state=state
         )
 
         board = state.board

@@ -680,7 +680,7 @@ class RulesTest(unittest.TestCase):
     def test_draw_tiles_1(self):
         state = self.empty_state.copy()
         state.bag.tiles = get_tiles_from_string("A")
-        draw_tiles(state.player_to_state[self.p0], state.bag, 1)
+        draw_tiles_for_player(state.player_to_state[self.p0], state.bag, 1)
 
         exp_state = self.empty_state.copy()
         exp_state.player_to_state[self.p0].tiles = get_tiles_from_string("A")
@@ -689,7 +689,7 @@ class RulesTest(unittest.TestCase):
     def test_draw_tiles_2(self):
         state = self.empty_state.copy()
         state.bag.tiles = get_tiles_from_string("A")
-        draw_tiles(state.player_to_state[self.p0], state.bag, 2)
+        draw_tiles_for_player(state.player_to_state[self.p0], state.bag, 2)
 
         exp_state = self.empty_state.copy()
         exp_state.player_to_state[self.p0].tiles = get_tiles_from_string("A")
@@ -1398,11 +1398,7 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1423,11 +1419,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1490,11 +1487,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1514,11 +1512,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1540,11 +1539,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1587,11 +1587,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1612,11 +1613,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1667,11 +1669,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1692,11 +1695,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1715,11 +1719,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 0)
         )
@@ -1739,11 +1744,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 14)
         )
@@ -1762,11 +1768,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [blank]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1802,11 +1809,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1827,11 +1835,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1894,11 +1903,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1918,11 +1928,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1944,11 +1955,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -1991,11 +2003,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2016,11 +2029,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2071,11 +2085,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2096,11 +2111,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2119,11 +2135,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(0, 7)
         )
@@ -2142,11 +2159,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(14, 7)
         )
@@ -2165,11 +2183,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [blank]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_straight_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2205,11 +2224,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_offset_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2230,11 +2250,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_vertical_offset_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2328,11 +2349,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_offset_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )
@@ -2353,11 +2375,12 @@ class MoveGenerationTest(unittest.TestCase):
         state.player_to_state[self.p0].tiles = [a, b]
 
         # Get the playable letter info.
-        playable_letter_info = PlayableLetterInfo(
-            board=state.board,
-            words=state.config.playable_words,
-            infix_info=self.moves_finder.infix_data,
-        )
+        # playable_letter_info = PlayableLetterInfo(
+        #     board=state.board,
+        #     words=state.config.playable_words,
+        #     infix_info=self.moves_finder.infix_data,
+        # )
+        playable_letter_info = PlayableLetterInfo(state=state)
         moves = self.moves_finder._get_all_horizontal_offset_moves(
             state=state, playable_letter_info=playable_letter_info, pos=(7, 7)
         )

@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from random import shuffle
 
 # import game_state
+from constants import *
 from game_state import *
 from game_state import BoardPosition, GameState
 
@@ -69,13 +70,23 @@ def deduct_final_tile_points(state: GameState, add_to_current_player: bool) -> N
 
 
 # Have the given player draw the given number of tiles.
-def draw_tiles(player: PlayerState, bag: Bag, num_tiles: int) -> None:
+def draw_tiles_for_player(player: PlayerState, bag: Bag, num_tiles: int) -> None:
     shuffle(bag.tiles)
     num_tiles = min(num_tiles, len(bag.tiles))
     drawn_tiles, remaining_tiles = bag.tiles[:num_tiles], bag.tiles[num_tiles:]
     player.tiles.extend(drawn_tiles)
     bag.tiles = remaining_tiles
     shuffle(bag.tiles)
+
+
+# Draw the given number of tiles from the bag and return them.
+def draw_tiles(bag: Bag, num_tiles: int) -> list[Tile]:
+    shuffle(bag.tiles)
+    num_tiles = min(num_tiles, len(bag.tiles))
+    drawn_tiles, remaining_tiles = bag.tiles[:num_tiles], bag.tiles[num_tiles:]
+    bag.tiles = remaining_tiles
+    shuffle(bag.tiles)  # TODO maybe remove this.
+    return drawn_tiles
 
 
 # A move where a single word is placed.
@@ -352,7 +363,7 @@ class PlaceTilesMove(Move):
             deduct_final_tile_points(state=state, add_to_current_player=True)
         else:
             # Draw new tiles.
-            draw_tiles(
+            draw_tiles_for_player(
                 player=player_state,
                 bag=state.bag,
                 num_tiles=len(self.position_to_placing),
@@ -441,7 +452,9 @@ class ExchangeTilesMove(Move):
                 pass
 
         # Give the player the same number of tiles (or as many as possible) from the bag.
-        draw_tiles(player=player_state, bag=state.bag, num_tiles=len(self.tiles))
+        draw_tiles_for_player(
+            player=player_state, bag=state.bag, num_tiles=len(self.tiles)
+        )
         # tiles_to_draw = min(len(self.tiles), len(state.bag.tiles))
         # shuffle(state.bag.tiles)
         # drawn_tiles, remaining_tiles = (
@@ -478,6 +491,11 @@ def advance_player(state: GameState) -> None:
             state.current_player.position, num_players=len(state.player_order)
         )
     )
+    # state.current_player = state.player_order[
+    #     get_next_player_index(
+    #         state.current_player.position, num_players=len(state.player_order)
+    #     )
+    # ]
 
 
 # End the game if enough scoreless turns have passed.

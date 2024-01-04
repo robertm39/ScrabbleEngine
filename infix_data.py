@@ -1,7 +1,7 @@
 from typing import Iterable
 from frozendict import frozendict
 
-from game_state import ALPHABET
+from constants import ALPHABET
 
 ALPHABET_SET = frozenset(ALPHABET)
 

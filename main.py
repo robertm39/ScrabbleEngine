@@ -3,6 +3,7 @@ from rules import *
 from utils import *
 import ai_strategies
 import game_runner
+import tournament
 
 
 # Run a game between two AI players.
@@ -57,8 +58,24 @@ def test_1():
     print(f"{winner.get_name_or_number()} wins!")
 
 
+# Run a basic tournament.
+def tournament_1():
+    player_1 = tournament.TournamentPlayer(
+        get_strategy=lambda: ai_strategies.RandomWordStrategy(), name="Player 1"
+    )
+    player_2 = tournament.TournamentPlayer(
+        get_strategy=lambda: ai_strategies.HighestScoringWordStrategy(), name="Player 2"
+    )
+
+    results = tournament.do_tournament_matches(player_1=player_1, player_2=player_2, num_matches=1)
+    print(f"Player 1 won {results.num_player_1_wins} times.")
+    print(f"Player 2 won {results.num_player_2_wins} times.")
+    print(f"There were {results.num_ties} ties.")
+
+
 def main():
-    test_1()
+    # test_1()
+    tournament_1()
 
 
 if __name__ == "__main__":
