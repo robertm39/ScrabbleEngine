@@ -5,9 +5,10 @@ from rules import *
 
 import move_generation
 
+VALUE_PER_TILE = 3
 
-# A strategy that plays the highest scoring word, or passes if it doesn't find any.
-class HighestScoringWordStrategy(MoveGetter):
+# A strategy that likes both points and playing tiles.
+class ScoreAndTilesStrategy(MoveGetter):
     def __init__(self) -> None:
         self.moves_finder: move_generation.PlaceTilesMoveFinder | None = None
 
@@ -35,8 +36,8 @@ class HighestScoringWordStrategy(MoveGetter):
 
         if placement_moves:
             before_score = state.player_to_state[state.current_player].score
-            highest_scoring_move = None
-            highest_score = -1
+            highest_value_move = None
+            highest_value = -1
             for move in placement_moves:
                 after_state = state.copy()
                 move.perform(after_state)
@@ -44,10 +45,12 @@ class HighestScoringWordStrategy(MoveGetter):
                     after_state.player_to_state[state.current_player].score
                     - before_score
                 )
-                if after_score > highest_score:
-                    highest_score = after_score
-                    highest_scoring_move = move
-            if highest_scoring_move is not None:
-                return highest_scoring_move
+                value = after_score + len(move.position_to_placing) * VALUE_PER_TILE
+
+                if value > highest_value:
+                    highest_value = value
+                    highest_value_move = move
+            if highest_value_move is not None:
+                return highest_value_move
 
         return PassMove()

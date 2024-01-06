@@ -1,3 +1,5 @@
 from always_pass import AlwaysPassStrategy
 from random_word import RandomWordStrategy
 from highest_scoring_word import HighestScoringWordStrategy
+from most_tiles_played import MostTilesPlayedStrategy
+from score_and_tiles import ScoreAndTilesStrategy

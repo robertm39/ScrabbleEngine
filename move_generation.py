@@ -312,6 +312,8 @@ class PlayableLetterInfo:
     def _get_vertical_suffix(self, pos: BoardPosition) -> str:
         return self._get_vertical_affix(pos=pos, inc=1)
 
+# class ChangeTreeDict:
+#     def __init__(self, )
 
 # The state of the algorithm for finding the tiles to place.
 @dataclass
