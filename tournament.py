@@ -79,7 +79,7 @@ def do_tournament_game(
     # Determine the winner.
     p1_score = state.player_to_state[p1].score
     p2_score = state.player_to_state[p2].score
-    print(f"Player 1: {p1_score}, Player 2: {p2_score}")
+    # print(f"Player 1: {p1_score}, Player 2: {p2_score}")
     if p1_score > p2_score:
         return GameResult.PLAYER_1_WINS
     if p2_score > p1_score:
@@ -247,9 +247,9 @@ def do_tournament_matches(
     num_player_2_wins = 0
     num_ties = 0
     for i in range(num_matches):
-        print(f"Match {i+1} out of {num_matches}:")
+        # print(f"Match {i+1} out of {num_matches}:")
         match_results = do_tournament_match(player_1=player_1, player_2=player_2)
-        print("")
+        # print("")
         num_player_1_wins += match_results.num_player_1_wins
         num_player_2_wins += match_results.num_player_2_wins
         num_ties += match_results.num_ties

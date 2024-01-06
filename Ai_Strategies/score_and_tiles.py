@@ -5,12 +5,17 @@ from rules import *
 
 import move_generation
 
-VALUE_PER_TILE = 3
+VALUE_PER_TILE = 100
+
 
 # A strategy that likes both points and playing tiles.
 class ScoreAndTilesStrategy(MoveGetter):
-    def __init__(self) -> None:
+    def __init__(self, value_per_tile: float=VALUE_PER_TILE) -> None:
         self.moves_finder: move_generation.PlaceTilesMoveFinder | None = None
+        self.value_per_tile = value_per_tile
+
+    def get_name(self) -> str:
+        return f"{type(self).__name__}(value_per_tile={self.value_per_tile})"
 
     # Initialize the moves-finder, if it isn't already initialized.
     def _init_moves_finder(self, state: GameState) -> None:
@@ -45,7 +50,9 @@ class ScoreAndTilesStrategy(MoveGetter):
                     after_state.player_to_state[state.current_player].score
                     - before_score
                 )
-                value = after_score + len(move.position_to_placing) * VALUE_PER_TILE
+                value = (
+                    after_score + len(move.position_to_placing) * self.value_per_tile
+                )
 
                 if value > highest_value:
                     highest_value = value

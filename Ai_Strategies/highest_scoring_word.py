@@ -11,6 +11,7 @@ class HighestScoringWordStrategy(MoveGetter):
     def __init__(self) -> None:
         self.moves_finder: move_generation.PlaceTilesMoveFinder | None = None
 
+
     # Initialize the moves-finder, if it isn't already initialized.
     def _init_moves_finder(self, state: GameState) -> None:
         if self.moves_finder is None:

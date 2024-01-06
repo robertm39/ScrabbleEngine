@@ -70,7 +70,9 @@ def tournament_1():
     )
 
     before = time.time()
-    results = tournament.do_tournament_matches(player_1=player_1, player_2=player_2, num_matches=5)
+    results = tournament.do_tournament_matches(
+        player_1=player_1, player_2=player_2, num_matches=5
+    )
     after = time.time()
     print(f"Took {after-before:.2f} seconds.")
     print(f"Player 1 won {results.num_player_1_wins} times.")
@@ -78,9 +80,130 @@ def tournament_1():
     print(f"There were {results.num_ties} ties.")
 
 
+def tournament_2():
+    players = [
+        tournament.TournamentPlayer(
+            get_strategy=lambda: ai_strategies.HighestScoringWordStrategy(),
+            name="Highest_Score",
+        ),
+        tournament.TournamentPlayer(
+            get_strategy=lambda: ai_strategies.ScoreAndTilesStrategy(value_per_tile=0.5),
+            name="Tiles_0.5",
+        ),
+        tournament.TournamentPlayer(
+            get_strategy=lambda: ai_strategies.ScoreAndTilesStrategy(value_per_tile=1),
+            name="Tiles_1.0",
+        ),
+        tournament.TournamentPlayer(
+            get_strategy=lambda: ai_strategies.ScoreAndTilesStrategy(value_per_tile=1.5),
+            name="Tiles_1.5",
+        ),
+        tournament.TournamentPlayer(
+            get_strategy=lambda: ai_strategies.ScoreAndTilesStrategy(value_per_tile=2),
+            name="Tiles_2",
+        ),
+        tournament.TournamentPlayer(
+            get_strategy=lambda: ai_strategies.ScoreAndTilesStrategy(value_per_tile=2.5),
+            name="Tiles_2.5",
+        ),
+        tournament.TournamentPlayer(
+            get_strategy=lambda: ai_strategies.ScoreAndTilesStrategy(value_per_tile=3.0),
+            name="Tiles_3.0",
+        ),
+    ]
+
+    # num_matches_per_pairing = 20
+
+    # win_prob_table[p1_index, p2_index] is the estimated chance that p1 will beat p2 in a game.
+    # win_prob_table = dict[tuple[int, int], float]()
+    win_table = dict[tuple[int, int], int]()
+    # loss_table = dict[tuple[int, int], int]()
+
+    # Initialize the tables to zero.
+    for i in range(len(players)):
+        for j in range(len(players)):
+            win_table[i, j] = 0
+            # loss_table[i, j] = 0
+
+    # # Every player is assumed to have a 50% chance of beating itself.
+    # for i in range(len(players)):
+    #     win_prob_table[i, i] = 0.5
+
+    # Run each matchup of the tournament.
+    # for _ in range(num_matches_per_pairing):
+    round_num = 1
+    while True:
+        print(f"Round {round_num}.")
+        round_num += 1
+
+        # Print the names.
+        print("")
+        print("Names:")
+        for player_i, player in enumerate(players):
+            print(f"{player_i}: {player.name}")
+        print("")
+
+        for p1_index in range(len(players) - 1):
+            for p2_index in range(p1_index + 1, len(players)):
+                p1 = players[p1_index]
+                p2 = players[p2_index]
+                print(f"{p1.name} vs {p2.name}.")
+
+                results = tournament.do_tournament_matches(
+                    player_1=p1, player_2=p2, num_matches=1
+                )
+
+                win_table[p1_index, p2_index] += results.num_player_1_wins
+                # loss_table[p2_index, p1_index] += results.num_player_1_wins
+
+                win_table[p2_index, p1_index] += results.num_player_2_wins
+                # loss_table
+
+                # p1_win_prob = results.num_player_1_wins / (
+                #     results.num_player_1_wins + results.num_player_2_wins
+                # )
+                # p2_win_prob = 1 - p1_win_prob
+                # win_prob_table[p1_index, p2_index] = p1_win_prob
+                # win_prob_table[p2_index, p1_index] = p2_win_prob
+
+        print("")
+
+        # Print the win-table.
+        print("Win table:")
+        for p1_i in range(len(players)):
+            for p2_i in range(len(players)):
+                print(f"{p1_i}, {p2_i}: {win_table[p1_i, p2_i]}")
+
+        # Print the probability table.
+        print("")
+        print("Win-prob table:")
+        for p1_i in range(len(players)):
+            for p2_i in range(len(players)):
+                num_wins = win_table[p1_i, p2_i]
+                num_losses = win_table[p2_i, p1_i]
+                if num_wins + num_losses == 0:
+                    win_prob = 0.5
+                else:
+                    win_prob = num_wins / (num_wins + num_losses)
+                print(f"{p1_i}, {p2_i}: {win_prob:0.2f}")
+        print("")
+        print("")
+
+    # # Print the names.
+    # for i, player in enumerate(players):
+    #     print(f"{i}: {player.name}")
+    # print("")
+
+    # # Print the results.
+    # for p1_index in range(len(players)):
+    #     for p2_index in range(len(players)):
+    #         print(f"{p1_index}, {p2_index}: {win_prob_table[p1_index, p2_index]:.02f}")
+
+
 def main():
     # test_1()
-    tournament_1()
+    # tournament_1()
+    tournament_2()
 
 
 if __name__ == "__main__":

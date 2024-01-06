@@ -657,3 +657,6 @@ class MoveGetter(ABC):
 
     def notify_new_state(self, state: GameState) -> None:
         pass
+
+    def get_name(self) -> str:
+        return type(self).__name__
