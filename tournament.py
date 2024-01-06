@@ -246,8 +246,10 @@ def do_tournament_matches(
     num_player_1_wins = 0
     num_player_2_wins = 0
     num_ties = 0
-    for _ in range(num_matches):
+    for i in range(num_matches):
+        print(f"Match {i+1} out of {num_matches}:")
         match_results = do_tournament_match(player_1=player_1, player_2=player_2)
+        print("")
         num_player_1_wins += match_results.num_player_1_wins
         num_player_2_wins += match_results.num_player_2_wins
         num_ties += match_results.num_ties

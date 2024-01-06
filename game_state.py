@@ -1,17 +1,13 @@
 from typing import (
     cast,
-    Any,
     Generator,
     Self,
-    Literal,
     MutableMapping,
     Mapping,
     Collection,
     Sequence,
     Iterable,
 )
-from enum import Enum
-import copy
 from dataclasses import dataclass
 from frozendict import frozendict
 
@@ -42,9 +38,12 @@ class LetterTile(Tile):
     def __init__(self, letter: LETTER, points: int = 0) -> None:
         self.letter = letter
         self.points = points
+        self._hash: int | None = None
 
     def __hash__(self) -> int:
-        return hash(self.letter) & hash(self.points)
+        if self._hash is None:
+            self._hash = hash(self.letter) & hash(self.points) ^ hash(type(self))
+        return self._hash
 
     def __eq__(self, other) -> bool:
         if type(other) is not type(self):
@@ -62,9 +61,12 @@ class BlankTile(Tile):
     def __init__(self, letter: LETTER | None = None, points: int = 0) -> None:
         self.letter = letter
         self.points = points
+        self._hash: int | None = None
 
     def __hash__(self) -> int:
-        return hash(self.letter) ^ hash(self.points)
+        if self._hash is None:
+            self._hash = hash(self.letter) ^ hash(self.points) ^ hash(type(self))
+        return self._hash
 
     def __eq__(self, other) -> bool:
         if type(other) is not type(self):
@@ -85,8 +87,14 @@ def get_board_position(x: int, y: int) -> BoardPosition:
 class WordMultiplier:
     multiplier: int
 
+    def __init__(self, multiplier: int) -> None:
+        self.multiplier = multiplier
+        self._hash: int | None = None
+
     def __hash__(self) -> int:
-        return hash(self.multiplier) ^ hash(type(self))
+        if self._hash is None:
+            self._hash = hash(self.multiplier) ^ hash(type(self))
+        return self._hash
 
 
 # A multiplier on the board for a tile.
@@ -94,8 +102,14 @@ class WordMultiplier:
 class TileMultiplier:
     multiplier: int
 
+    def __init__(self, multiplier: int) -> None:
+        self.multiplier = multiplier
+        self._hash: int | None = None
+
     def __hash__(self) -> int:
-        return hash(self.multiplier) ^ hash(type(self))
+        if self._hash is None:
+            self._hash = hash(self.multiplier) ^ hash(type(self))
+        return self._hash
 
 
 # Any multiplier on the board.
@@ -121,7 +135,7 @@ class GameConfig:
         bonus_points: int,
         scoreless_turns_to_end_game: int,
         config_name: str = "",
-        infix_data: infix_data.InfixData | None=None,
+        infix_data: infix_data.InfixData | None = None,
     ):
         self.playable_words = frozenset(playable_words)
         self.min_tiles_for_turn_in = min_tiles_for_turn_in
@@ -146,13 +160,20 @@ class Player:
     position: int
     name: str = ""
 
+    def __init__(self, position: int, name: str = "") -> None:
+        self.position = position
+        self.name = name
+        self._hash: int | None = None
+
     def get_name_or_number(self) -> str:
         if self.name == "":
             return f"Player {self.position}"
         return self.name
 
     def __hash__(self) -> int:
-        return hash(self.position)
+        if self._hash is None:
+            self._hash = hash(self.position)
+        return self._hash
 
 
 # The state of a player in the game.
@@ -175,6 +196,11 @@ class PlayerState:
             score=self.score,
             tiles=[None] * len(self.tiles),
             # next_turn_skipped=self.next_turn_skipped,
+        )
+
+    def copy(self) -> Self:
+        return cast(
+            Self, PlayerState(player=self.player, score=self.score, tiles=self.tiles)
         )
 
 
@@ -277,7 +303,23 @@ class Board:
         self.height = height
         self.starting_position = starting_position
         self.position_to_tile = dict(position_to_tile)
-        self.position_to_multiplier = frozendict(position_to_multiplier)
+
+        if isinstance(position_to_multiplier, frozendict):
+            self.position_to_multiplier = position_to_multiplier
+        else:
+            self.position_to_multiplier = frozendict(position_to_multiplier)
+
+    def copy(self) -> Self:
+        return cast(
+            Self,
+            Board(
+                width=self.width,
+                height=self.height,
+                position_to_tile=self.position_to_tile,
+                position_to_multiplier=self.position_to_multiplier,
+                starting_position=self.starting_position,
+            ),
+        )
 
     # Yield all positions on the board. TODO unit-test.
     def all_positions(self) -> Generator[BoardPosition, None, None]:
@@ -413,10 +455,15 @@ class GameState:
         val = GameState(
             config=self.config,
             current_player=self.current_player,
-            player_to_state=copy.deepcopy(self.player_to_state),
+            # player_to_state=copy.deepcopy(self.player_to_state),
+            player_to_state={
+                p: p_state.copy() for p, p_state in self.player_to_state.items()
+            },
             player_order=self.player_order,
-            bag=copy.deepcopy(self.bag),
-            board=copy.deepcopy(self.board),
+            # bag=copy.deepcopy(self.bag),
+            bag=Bag(tiles=self.bag.tiles),
+            # board=copy.deepcopy(self.board),
+            board=self.board.copy(),
             game_finished=self.game_finished,
         )
         return val  # type: ignore

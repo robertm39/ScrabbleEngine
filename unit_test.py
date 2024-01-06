@@ -564,6 +564,54 @@ class RulesTest(unittest.TestCase):
             board=get_board_from_strings(),
         )
 
+    def test_get_horizontal_word_at_1(self):
+        board = get_board_from_strings(tile_string="CAT")
+        word = get_word_on_board_from_string(tile_string="CAT")
+
+        for x in range(3):
+            self.assertEqual(get_horizontal_word_at(board=board, pos=(x, 0)), word)
+
+    def test_get_horizontal_word_at_2(self):
+        board = get_board_from_strings(tile_string="CAT\n B ")
+        self.assertEqual(get_horizontal_word_at(board=board, pos=(1, 1)), None)
+
+    def test_get_horizontal_word_at_3(self):
+        board = get_board_from_strings(tile_string="DOG CAT FOX")
+        dog = get_word_on_board_from_string("DOG")
+        cat = get_word_on_board_from_string("    CAT")
+        fox = get_word_on_board_from_string("        FOX")
+
+        for x in 0, 1, 2:
+            self.assertEqual(get_horizontal_word_at(board=board, pos=(x, 0)), dog)
+        for x in 4, 5, 6:
+            self.assertEqual(get_horizontal_word_at(board=board, pos=(x, 0)), cat)
+        for x in 8, 9, 10:
+            self.assertEqual(get_horizontal_word_at(board=board, pos=(x, 0)), fox)
+
+    def test_get_vertical_word_at_1(self):
+        board = get_board_from_strings(tile_string="C\nA\nT")
+        word = get_word_on_board_from_string(tile_string="C\nA\nT")
+
+        for y in range(3):
+            self.assertEqual(get_vertical_word_at(board=board, pos=(0, y)), word)
+
+    def test_get_vertical_word_at_2(self):
+        board = get_board_from_strings(tile_string="C \nAB\nT ")
+        self.assertEqual(get_vertical_word_at(board=board, pos=(1, 1)), None)
+
+    def test_get_vertical_word_at_3(self):
+        board = get_board_from_strings(tile_string="D\nO\nG\n \nC\nA\nT\n \nF\nO\nX")
+        dog = get_word_on_board_from_string("D\nO\nG")
+        cat = get_word_on_board_from_string(" \n \n \n \nC\nA\nT")
+        fox = get_word_on_board_from_string(" \n \n \n \n \n \n \n \nF\nO\nX")
+
+        for y in 0, 1, 2:
+            self.assertEqual(get_vertical_word_at(board=board, pos=(0, y)), dog)
+        for y in 4, 5, 6:
+            self.assertEqual(get_vertical_word_at(board=board, pos=(0, y)), cat)
+        for y in 8, 9, 10:
+            self.assertEqual(get_vertical_word_at(board=board, pos=(0, y)), fox)
+
     def test_end_game_for_scoreless_turns(self):
         state = self.empty_state.copy()
         end_game_for_scoreless_turns(state)

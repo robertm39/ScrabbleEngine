@@ -1,0 +1,14 @@
+First:
+835.17 seconds (one tournament match, highest word v. highest word)
+
+Second
+Better GameState.copy(), better PlaceTilesMove.get_words_made():
+135.05 seconds (one tournament match, highest word v. highest word)
+
+Third
+Cached __hash__ functions:
+76.44 seconds (one tournament match, highest word v. highest word)
+
+Fourth
+Optimization in move_generation.get_all_possible_placings()
+58.21 (one tournament match, highest word v. highest word)

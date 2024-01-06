@@ -12,12 +12,18 @@ from game_state import BoardPosition, GameState
 class LetterTilePlacing:
     tile: LetterTile
 
+    def __init__(self, tile: LetterTile) -> None:
+        self.tile = tile
+        self._hash: int | None = None
+
     @property
     def letter(self) -> LETTER:
         return self.tile.letter
 
     def __hash__(self) -> int:
-        return hash(self.tile)
+        if self._hash is None:
+            self._hash = hash(self.tile) ^ hash(type(self))
+        return self._hash
 
 
 @dataclass
@@ -25,8 +31,15 @@ class BlankTilePlacing:
     tile: BlankTile
     letter: LETTER
 
+    def __init__(self, tile: BlankTile, letter: LETTER) -> None:
+        self.tile = tile
+        self.letter = letter
+        self._hash: int | None = None
+
     def __hash__(self) -> int:
-        return hash(self.tile) ^ hash(self.letter)
+        if self._hash is None:
+            self._hash = hash(self.tile) ^ hash(self.letter) ^ hash(type(self))
+        return self._hash
 
 
 # A placing of any tile.
@@ -89,6 +102,80 @@ def draw_tiles(bag: Bag, num_tiles: int) -> list[Tile]:
     return drawn_tiles
 
 
+# Return the horizontal word at the given position, if any.
+def get_horizontal_word_at(board: Board, pos: BoardPosition) -> WordOnBoard | None:
+    center = board.get_letter_at(pos)
+    if center is None:
+        return None
+
+    # Get the start of the word.
+    x, y = pos
+    start_x = x
+    while True:
+        start_x -= 1
+        if board.get_letter_at((start_x, y)) is None:
+            start_x += 1
+            break
+
+    # Get the end of the word.
+    end_x = x
+    while True:
+        end_x += 1
+        if board.get_letter_at((end_x, y)) is None:
+            end_x -= 1
+            break
+
+    # Don't count one-letter words.
+    if start_x == end_x:
+        return None
+
+    pos_to_tile = dict[BoardPosition, Tile]()
+    for x in range(start_x, end_x + 1):
+        letter_pos = x, y
+        tile = board.get_tile_at(letter_pos)
+        if tile is None:
+            return None  # Shouldn't happen
+        pos_to_tile[letter_pos] = tile
+    return WordOnBoard(position_to_tile=pos_to_tile)
+
+
+# Return the vertical word at the given position, if any.
+def get_vertical_word_at(board: Board, pos: BoardPosition) -> WordOnBoard | None:
+    center = board.get_letter_at(pos)
+    if center is None:
+        return None
+
+    # Get the start of the word.
+    x, y = pos
+    start_y = y
+    while True:
+        start_y -= 1
+        if board.get_letter_at((x, start_y)) is None:
+            start_y += 1
+            break
+
+    # Get the end of the word.
+    end_y = y
+    while True:
+        end_y += 1
+        if board.get_letter_at((x, end_y)) is None:
+            end_y -= 1
+            break
+
+    # Don't count one-letter words.
+    if start_y == end_y:
+        return None
+
+    pos_to_tile = dict[BoardPosition, Tile]()
+    for y in range(start_y, end_y + 1):
+        letter_pos = x, y
+        tile = board.get_tile_at(letter_pos)
+        if tile is None:
+            return None  # Shouldn't happen
+        pos_to_tile[letter_pos] = tile
+    return WordOnBoard(position_to_tile=pos_to_tile)
+
+
 # A move where a single word is placed.
 @dataclass
 class PlaceTilesMove(Move):
@@ -98,31 +185,72 @@ class PlaceTilesMove(Move):
         self, position_to_placing: Mapping[BoardPosition, TilePlacing]
     ) -> None:
         self.position_to_placing = frozendict(position_to_placing)
+        self._hash: int | None = None
 
     def __hash__(self) -> int:
-        return hash(self.position_to_placing)
+        if self._hash is None:
+            self._hash = hash(self.position_to_placing)
+        return self._hash
 
     # Return all of the words made by this move.
     def get_words_made(self, board: Board) -> list[WordOnBoard]:
-        # First, see what words were already on the board.
-        all_previous_words = board.get_words()
+        board = board.copy()
 
-        new_position_to_tile = dict(board.position_to_tile)
         for position, placing in self.position_to_placing.items():
             if isinstance(placing, BlankTilePlacing):
                 tile = BlankTile(letter=placing.letter)
             else:
                 tile = placing.tile
+            board.position_to_tile[position] = tile
+        
+        result = list[WordOnBoard]()
+        is_vertical = False
+        is_horizontal = False
+        prev_position: BoardPosition|None = None
+        for position in self.position_to_placing:
+            if prev_position is not None:
+                # Check whether we're horizontal or vertical.
+                p_x, p_y = prev_position
+                x, y = position
+                if x != p_x:
+                    is_horizontal = True
+                elif y != p_y:
+                    is_vertical=True
 
-            new_position_to_tile[position] = tile
-        new_state = Board(
-            width=board.width,
-            height=board.height,
-            position_to_tile=new_position_to_tile,
-            position_to_multiplier=board.position_to_multiplier,
-        )
-        all_words = new_state.get_words()
-        return [w for w in all_words if w not in all_previous_words]
+            prev_position = position
+
+            # If we aren't vertical (yet), check for the vertical word here.
+            if not is_vertical:
+                word = get_vertical_word_at(board=board, pos=position)
+                if word is not None:
+                    result.append(word)
+                    
+            # If we aren't horizontal (yet), check for the horizontal word here.
+            if not is_horizontal:
+                word = get_horizontal_word_at(board=board, pos=position)
+                if word is not None:
+                    result.append(word)
+        
+        return result
+
+        # # First, see what words were already on the board.
+        # all_previous_words = board.get_words()
+
+        # new_position_to_tile = dict(board.position_to_tile)
+        # for position, placing in self.position_to_placing.items():
+        #     if isinstance(placing, BlankTilePlacing):
+        #         tile = BlankTile(letter=placing.letter)
+        #     else:
+        #         tile = placing.tile
+        #     new_position_to_tile[position] = tile
+        # new_state = Board(
+        #     width=board.width,
+        #     height=board.height,
+        #     position_to_tile=new_position_to_tile,
+        #     position_to_multiplier=board.position_to_multiplier,
+        # )
+        # all_words = new_state.get_words()
+        # return [w for w in all_words if w not in all_previous_words]
 
     # Return whether this placement is linear, either top-to-bottom or left-to-right.
     def _is_particular_linear_placement(

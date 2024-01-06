@@ -349,14 +349,24 @@ def get_all_possible_placings(
 ) -> list[TilePlacing]:
     # Get all of the possible tile-placings.
     placings = list[TilePlacing]()
-    if isinstance(tile, BlankTile):
-        for letter in ok_side_letters:
-            if letter in ok_letters:
-                placings.append(BlankTilePlacing(tile=tile, letter=letter))
-    elif isinstance(tile, LetterTile):
+    if isinstance(tile, LetterTile):
         # If the letter is okay, we can place this tile here.
         if tile.letter in ok_side_letters and tile.letter in ok_letters:
             placings.append(LetterTilePlacing(tile=tile))
+    elif isinstance(tile, BlankTile):
+        if len(ok_side_letters) < len(ok_letters):
+            smaller = ok_side_letters
+            larger = ok_letters
+        else:
+            smaller = ok_letters
+            larger = ok_side_letters
+        for letter in smaller:
+            if letter in larger:
+                placings.append(BlankTilePlacing(tile=tile, letter=letter))
+
+        # for letter in ok_side_letters:
+        #     if letter in ok_letters:
+        #         placings.append(BlankTilePlacing(tile=tile, letter=letter))
     return placings
     # new_tiles_left = list(place_tiles_state.tiles_left)
     # new_tiles_left.remove(tile)
